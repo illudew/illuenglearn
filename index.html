@@ -19,6 +19,7 @@ button{cursor:pointer}
 .brand span{color:#79a9ff}
 .top-meta{display:flex;align-items:center;gap:8px}
 .streak{font-size:12px;color:#a5adbc;background:#11141a;border:1px solid #252a34;padding:7px 12px;border-radius:999px}
+.streak.best{color:#7d8798;background:#0f1216;border-color:#20252e}
 .sync-dot{width:8px;height:8px;border-radius:50%;background:#39d98a;box-shadow:0 0 0 4px rgba(57,217,138,.08)}
 .main{padding:0 15px}
 .view{animation:fade .22s ease}
@@ -56,6 +57,7 @@ button{cursor:pointer}
 .feedback.ok{color:#53e0a0}
 .feedback.bad{color:#ff8383}
 .feedback strong{color:#eaf1ff}
+.ptt-note{font-size:11px;color:#7f899b;margin-top:3px}
 .actions{display:flex;gap:9px;margin-top:14px}
 .btn{flex:1;border:none;border-radius:12px;padding:12px 14px;font-weight:650;font-size:14px;transition:.15s}
 .btn:active{transform:scale(.98)}
@@ -135,7 +137,7 @@ button{cursor:pointer}
 .seglv b{color:#8fb4ff}
 .cloze{font-size:16px;line-height:1.95;color:#dfe6f0;background:#171b22;border:1px solid #242a34;border-radius:14px;padding:15px;margin:4px 0 12px}
 .cloze .blank{color:#88aeff;font-weight:700;letter-spacing:2px}
-@media(max-width:420px){.choice-grid{grid-template-columns:repeat(3,1fr)}.word{font-size:31px}.meaning{font-size:20px}}
+@media(max-width:420px){.choice-grid{grid-template-columns:repeat(3,1fr)}.word{font-size:31px}.meaning{font-size:20px}.topbar{padding:17px 12px 9px}.top-meta{gap:5px}.streak{font-size:11px;padding:6px 9px}}
 </style>
 </head>
 <body>
@@ -144,7 +146,8 @@ button{cursor:pointer}
   <header class="topbar">
     <div class="brand">W<span>O</span>RDS</div>
     <div class="top-meta">
-      <div class="streak" id="pttEl" title="PTT 潜力值">PTT 0.00</div>
+      <div class="streak best" id="pttBestEl" title="历史最高 PTT">BEST 0.00</div>
+      <div class="streak" id="pttEl" title="当前 PTT">PTT 0.00</div>
       <div class="streak" id="streakEl">0 天</div>
       <div class="sync-dot" id="dataStatus" title="本地词库已就绪"></div>
     </div>
@@ -171,7 +174,9 @@ var EBB=[10*60*1000,864e5,2*864e5,4*864e5,7*864e5,15*864e5,30*864e5,60*864e5,120
 var MAX_STAGE=EBB.length-1;
 var STAGE_LABELS=['新建','10 分','1 天','2 天','4 天','7 天','15 天','30 天','60 天','120 天','1 年'];
 var STORE='words_v5';
-var DEFAULT={settings:{dailyNew:300,reviewLimit:300,level:5,mode:'en2zh',accent:'us',speechRate:0.92,autoSpeak:false},words:{},days:{},streak:{count:0,last:null},totalAnswers:0,totalCorrect:0,totalSeconds:0};
+/* PTT(潜力值) 模型参数：双轨制（历史最高只升不降 / 当前会因错误反扣） */
+var PTT={BASE_PEN:0.15,PEN_CAP_ABS:2.0,GLOBAL_PEN_CAP:1.0,DAY_DROP_CAP:0.3,SHIELD_CAP:0.5,DECAY:0.95,TOPN:50};
+var DEFAULT={settings:{dailyNew:300,reviewLimit:300,level:5,mode:'en2zh',accent:'us',speechRate:0.92,autoSpeak:false},words:{},days:{},streak:{count:0,last:null},totalAnswers:0,totalCorrect:0,totalSeconds:0,recent:[],pttRecord:0,pttDay:{date:null,start:0}};
 
 /* ---------- word bank ---------- */
 var WORDS=(window.WORDS_BANK||[]).map(function(a){return {w:a[0],us:a[1]||'',uk:a[2]||'',zh:a[3]||'',pos:a[4]||'',baseLv:a[5]||5,def:a[6]||'',tags:a[7]||'',ex:a[8]||'',sen:a[9]||''}});
@@ -191,25 +196,91 @@ window.addEventListener('error',function(e){showError(e.error||e.message)});
 
 /* ---------- persistence ---------- */
 function load(){try{var raw=localStorage.getItem(STORE);if(raw)return normalize(JSON.parse(raw))}catch(e){}return JSON.parse(JSON.stringify(DEFAULT))}
-function normalize(o){o=o||{};var st=Object.assign({},DEFAULT.settings,o.settings||{});st.level=Math.max(1,Math.min(10,parseInt(st.level,10)||5));if(st.mode!=='zh2en')st.mode='en2zh';if(st.accent!=='uk')st.accent='us';return {settings:st,words:o.words||{},days:o.days||{},streak:Object.assign({},DEFAULT.streak,o.streak||{}),totalAnswers:+o.totalAnswers||0,totalCorrect:+o.totalCorrect||0,totalSeconds:+o.totalSeconds||0}}
+function normalize(o){
+  o=o||{};var st=Object.assign({},DEFAULT.settings,o.settings||{});
+  st.level=Math.max(1,Math.min(10,parseInt(st.level,10)||5));if(st.mode!=='zh2en')st.mode='en2zh';if(st.accent!=='uk')st.accent='us';
+  var ws=o.words||{};
+  /* 兼容旧存档：补齐 PTT 字段，并为已学词回填历史最佳分 */
+  Object.keys(ws).forEach(function(w){var r=ws[w];if(!r)return;
+    if(r.errStreak==null)r.errStreak=0;if(r.penalty==null)r.penalty=0;if(r.last==null)r.last=0;if(r.pBest==null)r.pBest=0;
+    var d=MAP[w];if(d&&r.seen>0&&(r.correct||0)>0){var pb=((d.baseLv)||1)+fS(Math.round(proficiency(r)*100));if(pb>r.pBest)r.pBest=pb}
+  });
+  var rec=Array.isArray(o.recent)?o.recent.slice(-100):[];
+  var pd=(o.pttDay&&typeof o.pttDay==='object')?{date:o.pttDay.date||null,start:+o.pttDay.start||0}:{date:null,start:0};
+  return {settings:st,words:ws,days:o.days||{},streak:Object.assign({},DEFAULT.streak,o.streak||{}),totalAnswers:+o.totalAnswers||0,totalCorrect:+o.totalCorrect||0,totalSeconds:+o.totalSeconds||0,recent:rec,pttRecord:+o.pttRecord||0,pttDay:pd};
+}
 function save(){try{localStorage.setItem(STORE,JSON.stringify(state))}catch(e){}}
 
 /* ---------- memory model ---------- */
-function userRec(w){var r=state.words[w];if(!r){r={stage:0,dueAt:Date.now(),introduced:null,meaningCorrect:0,productionCorrect:0,meaningWrong:0,productionWrong:0,hints:0,seen:0,correct:0,responseMs:0,streak:0};state.words[w]=r}return r}
+function userRec(w){var r=state.words[w];if(!r){r={stage:0,dueAt:Date.now(),introduced:null,meaningCorrect:0,productionCorrect:0,meaningWrong:0,productionWrong:0,hints:0,seen:0,correct:0,responseMs:0,streak:0,errStreak:0,penalty:0,last:0,pBest:0};state.words[w]=r}return r}
 function personalLevel(d,r){r=r||{};var lv=d.baseLv;var wrong=(r.meaningWrong||0)+(r.productionWrong||0);lv+=Math.min(2.4,wrong*0.34);lv-=Math.min(1.4,(r.streak||0)*0.2);lv+=Math.min(1.0,(r.hints||0)*0.06);return clamp(Math.round(lv))}
 /* 熟练度 0..1：记忆阶段为主(80%)，正确率为辅(20%)。答错 stage 会回落，熟练度随之下降。 */
 function proficiency(r){r=r||{};if(!(r.seen>0))return 0;var st=Math.min(MAX_STAGE,r.stage||0)/MAX_STAGE;var acc=(r.correct||0)/r.seen;var p=st*0.8+acc*0.2;return Math.max(0,Math.min(1,p))}
 function proficiencyPct(r){return Math.round(proficiency(r)*100)}
-/* PTT 潜力值：仅统计已进入记忆库的词，各词(难度 × 熟练度)后取平均，满熟练度=100%。 */
+/* ---------- PTT 潜力值（双轨制）---------- */
+function pttS(r){return proficiency(r)*100}
+/* 熟练度修正 F(S)：S 为 0~100 */
+function fS(S){if(S>=100)return 2;if(S>=90)return 1+(S-90)/10;if(S>=70)return (S-70)/20;return 0}
+/* 单词基础分 P_base = C + F(S)，C 取词库难度 L */
+function pBase(d,r){var C=(d&&d.baseLv)||1;return C+fS(pttS(r))}
+/* 惩罚随时间自然衰减（每过一天 ×0.95），30 天基本归零 */
+function effPenalty(r){var p=(r&&r.penalty)||0;if(p<=0)return 0;var days=(r&&r.last)?Math.max(0,(Date.now()-r.last)/864e5):0;return p*Math.pow(PTT.DECAY,days)}
+/* 单词当前分 P_current = max(0, P_base − penalty) */
+function pCurrent(d,r){return Math.max(0,pBase(d,r)-effPenalty(r))}
+/* 护盾：由连续正确积累，错误时先被消耗 */
+function shieldOf(r){return Math.min(PTT.SHIELD_CAP,((r&&r.streak)||0)*0.05)}
+/* 单次错误惩罚 = 基础扣分 × 难度系数 × 错误类型系数 × 连错系数（难度越低扣越多） */
+function penaltyAdd(d,r,force,md){
+  var L=(d&&d.baseLv)||1;
+  var diff=Math.max(0.3,1.4-0.1*L);
+  var type=force?1.5:(md==='zh2en'?0.8:1.0);
+  var streak=1+Math.min((r&&r.errStreak)||0,5)*0.3;
+  return PTT.BASE_PEN*diff*type*streak;
+}
+/* 已学词的 P_best / P_current 列表 */
+function pttList(){
+  var list=[];
+  Object.keys(state.words).forEach(function(w){var r=state.words[w];if(!r||!(r.seen>0))return;var d=MAP[w];if(!d)return;
+    list.push({L:d.baseLv||1,best:(r.pBest||0),cur:pCurrent(d,r)});
+  });
+  return list;
+}
+/* 0.7×Top50 均值 + 0.3×按 L² 加权的全体均值 */
+function pttAgg(list,key){
+  var n=list.length;if(!n)return 0;
+  var sorted=list.slice().sort(function(a,b){return b[key]-a[key]});
+  var k=Math.min(PTT.TOPN,n),ts=0;for(var i=0;i<k;i++)ts+=sorted[i][key];
+  var top=ts/k,wsum=0,ws=0;
+  list.forEach(function(x){var W=x.L*x.L;wsum+=W;ws+=x[key]*W});
+  return 0.7*top+0.3*(wsum?ws/wsum:0);
+}
+/* 最近 100 次复习的错误率 / 完全忘记率 */
+function recentRates(){
+  var arr=state.recent||[],n=Math.min(100,arr.length);if(!n)return {err:0,forget:0};
+  var e=0,f=0;for(var i=arr.length-n;i<arr.length;i++){if(!arr[i].o)e++;if(arr[i].f)f++}
+  return {err:e/n,forget:f/n};
+}
+/* 计算 PTT：历史最高（只升不降）+ 当前（含近期惩罚与单日回撤上限） */
 function pttStats(){
-  var sum=0,n=0;Object.keys(state.words).forEach(function(w){var r=state.words[w];if(!r||!(r.seen>0))return;var d=MAP[w];if(!d)return;sum+=(d.baseLv||0)*proficiency(r);n++});
-  return {value:n?sum/n:0,count:n};
+  var list=pttList();
+  var rawBest=pttAgg(list,'best');
+  if(rawBest>(state.pttRecord||0))state.pttRecord=rawBest;
+  var rr=recentRates();
+  var gpen=Math.min(PTT.GLOBAL_PEN_CAP,0.4*rr.err+0.3*rr.forget);
+  var rawCur=Math.max(0,pttAgg(list,'cur')-gpen);
+  var t=today(),pd=state.pttDay||(state.pttDay={date:null,start:0});
+  if(pd.date!==t){pd.date=t;pd.start=rawCur}
+  var current=Math.max(0,Math.max(rawCur,pd.start-PTT.DAY_DROP_CAP));
+  return {best:state.pttRecord||0,current:current,raw:rawCur,gpen:gpen,count:list.length,err:rr.err,forget:rr.forget};
 }
 function refreshPTT(){
-  var e=$('pttEl');if(!e)return;
+  var before=(state.pttDay&&state.pttDay.date)||null;
   var s=pttStats();
-  e.textContent='PTT '+s.value.toFixed(2);
-  e.title='PTT 潜力值：已学 '+s.count+' 词的平均（难度 × 熟练度）。熟练度 = 0.8×记忆阶段 + 0.2×正确率，满熟练度 = 100%。';
+  if((state.pttDay&&state.pttDay.date)!==before)save();
+  var e=$('pttEl'),b=$('pttBestEl');
+  if(e){e.textContent='PTT '+s.current.toFixed(2);e.title='当前 PTT '+s.current.toFixed(2)+'（原始 '+s.raw.toFixed(2)+'，近期错误惩罚 −'+s.gpen.toFixed(2)+'）。统计 '+s.count+' 个已学词；0.7×Top50 + 0.3×L² 加权；单日最大回撤 '+PTT.DAY_DROP_CAP+'。'}
+  if(b){b.textContent='BEST '+s.best.toFixed(2);b.title='历史最高 PTT '+s.best.toFixed(2)+'：只升不降的巅峰值。'}
+  return s;
 }
 function posCN(pos){return {'noun':'名词','verb':'动词','adjective':'形容词','adverb':'副词','preposition':'介词','pronoun':'代词','conjunction':'连词','number':'数词','article':'冠词','auxiliary':'助动词','interjection':'感叹词','abbreviation':'缩写','plural':'复数'}[(pos||'').toLowerCase()]||'词汇'}
 function tagLabel(t){return {zk:'中考',gk:'高考',cet4:'四级',cet6:'六级',ky:'考研',toefl:'托福',ielts:'雅思',gre:'GRE'}[t]||t}
@@ -329,7 +400,7 @@ function renderCard(){
          '<input id="answer" class="input" placeholder="输入英文单词" autocomplete="off" autocapitalize="off" spellcheck="false">';
   }
   $('study-card').innerHTML='<div class="card"><div class="card-top"><div class="pills">'+
-     '<span class="pill">'+phLabel+'</span><span class="pill dim">记忆难度 Lv.'+lv+'</span><span class="pill dim">基点 Lv.'+d.baseLv+'</span><span class="pill dim">熟练度 '+proficiencyPct(r)+'%</span>'+
+     '<span class="pill">'+phLabel+'</span><span class="pill dim">记忆难度 Lv.'+lv+'</span><span class="pill dim">基点 Lv.'+d.baseLv+'</span><span class="pill dim">熟练度 '+proficiencyPct(r)+'%</span><span class="pill dim">PTT '+pCurrent(d,r).toFixed(2)+'/'+pBase(d,r).toFixed(2)+'</span>'+
      '</div><span class="phonetic">'+(session.done+1)+' / '+session.total+'</span></div>'+
      body+
      '<div class="answer-tools">'+
@@ -433,32 +504,44 @@ function submit(force){
   r.seen=(r.seen||0)+1;if(r.seen===1)r.introduced=today();r.responseMs=(r.responseMs||0)+elapsed;state.totalAnswers++;state.totalSeconds+=elapsed/1000;
   var md=state.settings.mode;
   var ok=!force&&(md==='en2zh'?checkMeaning(val,d.zh):checkSpelling(val,d.w));
+  /* PTT：先结算惩罚的时间衰减，再按本次结果更新 */
+  r.penalty=effPenalty(r);r.last=Date.now();
   if(ok){
-    state.totalCorrect++;session.correct++;r.correct=(r.correct||0)+1;r.streak=(r.streak||0)+1;
+    state.totalCorrect++;session.correct++;r.correct=(r.correct||0)+1;r.streak=(r.streak||0)+1;r.errStreak=0;
     if(md==='en2zh')r.meaningCorrect=(r.meaningCorrect||0)+1;else r.productionCorrect=(r.productionCorrect||0)+1;
     r.stage=Math.min(MAX_STAGE,(r.stage||0)+1);
     r.dueAt=Date.now()+EBB[r.stage];
+    /* 连对越多恢复越快，并刷新历史最佳分 */
+    r.penalty=Math.max(0,(r.penalty||0)-0.05*(1+r.streak));
+    var pb=pBase(d,r);if(pb>(r.pBest||0))r.pBest=pb;
     session.queue.shift();session.done++;markDay(true);
   }else{
-    session.wrong++;r.streak=0;
+    session.wrong++;r.errStreak=(r.errStreak||0)+1;
+    var shield=shieldOf(r); /* 护盾取自“连对”，须在清零前读取 */
     if(md==='en2zh')r.meaningWrong=(r.meaningWrong||0)+1;else r.productionWrong=(r.productionWrong||0)+1;
+    r.streak=0;
     r.stage=Math.max(0,(r.stage||0)-1);
     r.dueAt=Date.now()+EBB[0];
+    var add=Math.max(0,penaltyAdd(d,r,force,md)-shield);
+    r.penalty=Math.min((r.penalty||0)+add,((d.baseLv||1)*0.5),PTT.PEN_CAP_ABS);
     session.queue.push(session.queue.shift()); /* requeue the same word later in this session */
   }
-  save();showFeedback(ok,d,md);
+  state.recent.push({o:ok?1:0,f:force?1:0});if(state.recent.length>100)state.recent.shift();
+  save();showFeedback(ok,d,md,r);
 }
-function showFeedback(ok,d,md){
+function showFeedback(ok,d,md,r){
   phase='feedback';
   updatePlan();
   var ans=$('answer');if(ans)ans.disabled=true;
   var s=$('submitBtn'),f=$('failBtn'),h=$('hintBtn'),n=$('nextBtn'),lb=$('listenBtn');
   if(s)s.classList.add('hidden');if(f)f.classList.add('hidden');if(h)h.classList.add('hidden');if(lb)lb.classList.add('hidden');if(n)n.classList.remove('hidden');
   var fb=$('feedback');fb.className='feedback '+(ok?'ok':'bad');
+  var pen=r?effPenalty(r):0;
+  var pttNote=r?'<div class="ptt-note">基础分 '+pBase(d,r).toFixed(2)+' · 当前分 '+pCurrent(d,r).toFixed(2)+(pen>0.005?' · 惩罚 −'+pen.toFixed(2):'')+(r.streak?' · 连对 '+r.streak:'')+'</div>':'';
   if(md==='en2zh'){
-    fb.innerHTML=ok?'✓ 词义正确，记忆阶段已上升。':'✗ 释义：<strong>'+escapeHtml(d.zh)+'</strong>';
+    fb.innerHTML=(ok?'✓ 词义正确，记忆阶段已上升。':'✗ 释义：<strong>'+escapeHtml(d.zh)+'</strong>')+pttNote;
   }else{
-    fb.innerHTML=ok?'✓ 例句填空正确，记忆阶段已上升。':'✗ 正确答案：<strong>'+escapeHtml(d.w)+'</strong>　'+escapeHtml(d.zh);
+    fb.innerHTML=(ok?'✓ 例句填空正确，记忆阶段已上升。':'✗ 正确答案：<strong>'+escapeHtml(d.w)+'</strong>　'+escapeHtml(d.zh))+pttNote;
   }
   var box=$('detailBox');
   if(box){
@@ -515,7 +598,7 @@ function renderStats(){
     var st=Math.min(MAX_STAGE,r.stage||0);stageDist[st]++;
     var lv=personalLevel(d,r);diffDist[lv]++;lvSum+=lv;profSum+=proficiency(r);
     var wrong=(r.meaningWrong||0)+(r.productionWrong||0);
-    if(wrong){weak.push({w:w,wrong:wrong,lv:lv,prof:proficiencyPct(r)})}
+    if(wrong){weak.push({w:w,wrong:wrong,lv:lv,prof:proficiencyPct(r),pen:effPenalty(r),cur:pCurrent(d,r)})}
   });
   weak.sort(function(a,b){return b.wrong-a.wrong});
   var avgLv=learned?Math.round(lvSum/learned*10)/10:0;
@@ -528,16 +611,19 @@ function renderStats(){
   stageDist.forEach(function(n,i){bars+='<div class="dist"><span class="lab">'+STAGE_LABELS[i]+'</span><span class="track"><i style="width:'+(n/mx*100)+'%"></i></span><span class="num">'+n+'</span></div>'});
   var dmx=Math.max.apply(null,[1].concat(diffDist.slice(1,11))),dbars='';
   for(var L=1;L<=10;L++){dbars+='<div class="dist"><span class="lab">Lv.'+L+'</span><span class="track"><i style="width:'+(diffDist[L]/dmx*100)+'%"></i></span><span class="num">'+diffDist[L]+'</span></div>'}
-  var weakHtml=weak.slice(0,8).map(function(x){return '<div class="weak-row"><div><div class="weak-word">'+escapeHtml(x.w)+'</div><div class="weak-meta">记忆难度 Lv.'+x.lv+' · 熟练度 '+x.prof+'%</div></div><div class="weak-meta">错 '+x.wrong+' 次</div></div>'}).join('')||'<div class="tiny">暂时没有高频错词。</div>';
+  var weakHtml=weak.slice(0,8).map(function(x){return '<div class="weak-row"><div><div class="weak-word">'+escapeHtml(x.w)+'</div><div class="weak-meta">Lv.'+x.lv+' · 熟练度 '+x.prof+'% · 当前分 '+x.cur.toFixed(2)+(x.pen>0.005?' · 惩罚 −'+x.pen.toFixed(2):'')+'</div></div><div class="weak-meta">错 '+x.wrong+' 次</div></div>'}).join('')||'<div class="tiny">暂时没有高频错词。</div>';
   $('view-stats').innerHTML=
    '<div class="section-head"><div><div class="eyebrow">MEMORY PROFILE</div><h1 class="page-title">统计</h1></div><div class="tiny">基点难度自动分级 1–10</div></div>'+
-   '<div class="grid2"><div class="stat"><div class="k">PTT 潜力值</div><div class="v">'+ptt.value.toFixed(2)+'<small>/ 10</small></div></div>'+
+   '<div class="grid2">'+
+   '<div class="stat"><div class="k">当前 PTT</div><div class="v">'+ptt.current.toFixed(2)+'<small>/ 12</small></div></div>'+
+   '<div class="stat"><div class="k">历史最高 PTT</div><div class="v">'+ptt.best.toFixed(2)+'<small>/ 12</small></div></div>'+
    '<div class="stat"><div class="k">平均熟练度</div><div class="v">'+avgProf+'<small>%</small></div></div>'+
+   '<div class="stat"><div class="k">近期错误率</div><div class="v">'+Math.round(ptt.err*100)+'<small>% · 忘记 '+Math.round(ptt.forget*100)+'%</small></div></div>'+
    '<div class="stat"><div class="k">连续打卡</div><div class="v">'+(state.streak.count||0)+'<small>天</small></div></div>'+
    '<div class="stat"><div class="k">已进入记忆库</div><div class="v">'+learned.toLocaleString()+'<small>词</small></div></div>'+
    '<div class="stat"><div class="k">总正确率</div><div class="v">'+accuracy()+'<small>%</small></div></div>'+
    '<div class="stat"><div class="k">待复习</div><div class="v">'+due.toLocaleString()+'<small>词</small></div></div></div>'+
-   '<div class="panel"><div class="panel-title">PTT 潜力值</div><div class="tiny">PTT = 已学 '+ptt.count.toLocaleString()+' 个词的平均（难度 × 熟练度），满熟练度 = 100%，量程 0–10。每个词的熟练度 = 0.8×记忆阶段 + 0.2×正确率，答错会使记忆阶段回落后熟练度随之下降。</div></div>'+
+   '<div class="panel"><div class="panel-title">PTT 潜力值 · 双轨制</div><div class="tiny">统计已学 '+ptt.count.toLocaleString()+' 个词。<b>历史最高 PTT</b> 只升不降，代表巅峰实力；<b>当前 PTT</b> 会因错误反扣，代表当下状态。两者均 = 0.7×Top50 均值 + 0.3×按 L² 加权的全体均值。<br>单词基础分 P_base = C + F(S)（C=难度，F(100%)=2）。错误时先扣护盾（连对积累，上限 '+PTT.SHIELD_CAP+'）再加惩罚，单单词惩罚上限 min(C×0.5, '+PTT.PEN_CAP_ABS+')；惩罚每天衰减 '+Math.round((1-PTT.DECAY)*100)+'%。近期 100 次复习的错误/忘记会带来最多 −'+PTT.GLOBAL_PEN_CAP+' 的全局惩罚；当前 PTT 单日最多回落 '+PTT.DAY_DROP_CAP+'。</div></div>'+
    '<div class="panel"><div class="panel-title">最近 7 天</div><div class="week">'+week+'</div></div>'+
    '<div class="panel"><div class="panel-title">记忆阶段分布</div><div class="tiny">阶段越高，下一次复习间隔越长；答错会回落到 10 分钟强化。</div>'+bars+'</div>'+
    '<div class="panel"><div class="panel-title">个人记忆难度</div><div class="tiny">当前平均 Lv.'+avgLv+'，由词库基点叠加你的错误、提示与连续正确动态修正。</div>'+dbars+'</div>'+
