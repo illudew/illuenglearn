@@ -112,6 +112,7 @@ button{cursor:pointer}
 .weak-meta{font-size:10.5px;color:#717b8d}
 .choice-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
 .choice{padding:10px 4px;border-radius:10px;background:#171b22;border:1px solid #282e39;color:#8993a5;font-size:11.5px}
+.choice small{display:block;font-size:10px;opacity:.7;margin-top:2px;font-weight:400}
 .choice.on{background:#4f8cff;border-color:#4f8cff;color:#fff}
 .range-row{display:flex;gap:10px;align-items:center}
 .range{flex:1;accent-color:#4f8cff}
@@ -733,8 +734,13 @@ function renderStats(){
 }
 function renderSettings(){
   var s=state.settings;
+  var totalByLv={},learnedByLv={};
+  WORDS.forEach(function(d){totalByLv[d.baseLv]=(totalByLv[d.baseLv]||0)+1});
+  Object.keys(state.words).forEach(function(w){var r=state.words[w];if(!r||!(r.seen>0))return;var d=MAP[w];if(!d)return;learnedByLv[d.baseLv]=(learnedByLv[d.baseLv]||0)+1});
   var lvBtns='';
-  for(var L=1;L<=10;L++)lvBtns+='<button class="choice '+(s.level===L?'on':'')+'" data-level="'+L+'" type="button">Lv.'+L+'</button>';
+  for(var L=1;L<=10;L++){var learned=learnedByLv[L]||0,total=totalByLv[L]||0;
+    lvBtns+='<button class="choice '+(s.level===L?'on':'')+'" data-level="'+L+'" type="button">Lv.'+L+'<small>'+learned+'/'+total+'</small></button>';
+  }
   $('view-settings').innerHTML=
    '<div class="section-head"><div><div class="eyebrow">SYSTEM</div><h1 class="page-title">设置</h1></div></div>'+
    '<div class="panel"><div class="panel-title">新词难度（1–10 自由选择）</div><p class="muted">只抽取所选 <b>基点难度</b> 的新词；基点由词频与考试等级自动分级，再叠加你的错误 / 提示 / 连对形成个人记忆难度。到期复习不受此限制。</p>'+
