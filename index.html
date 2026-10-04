@@ -195,6 +195,10 @@ function pronHtml(d,ac){
   function chip(a,label,phon){return '<button class="pron'+(a===ac?' active':'')+(phon?'':' empty')+'" data-pron="'+a+'" type="button"><b>'+label+'</b>'+(phon?'/'+escapeHtml(phon)+'/':'—')+'</button>'}
   return '<div class="pron-row">'+chip('us','美',d.us||'')+chip('uk','英',d.uk||'')+'<span class="pron-hint">点击试听</span></div>';
 }
+function refreshPronActive(){
+  var ac=state.settings.accent==='uk'?'uk':'us';
+  document.querySelectorAll('[data-pron]').forEach(function(b){b.classList.toggle('active',b.dataset.pron===ac)});
+}
 function modeLabel(){var m=state.settings.difficulty;return m==='adaptive'?'自适应':m==='easy'?'基础':m==='mid'?'进阶':m==='hard'?'困难':'挑战'}
 function allowNew(d){var m=state.settings.difficulty;if(m==='adaptive')return true;if(m==='easy')return d.baseLv<=3;if(m==='mid')return d.baseLv>=4&&d.baseLv<=6;if(m==='hard')return d.baseLv>=7&&d.baseLv<=8;if(m==='extreme')return d.baseLv>=9;return true}
 function priority(d){var r=state.words[d.w];var p=personalLevel(d,r);var struggle=r?((r.productionWrong||0)*2+(r.meaningWrong||0)+(r.hints||0)*0.3):0;var stage=r?(r.stage||0):0;return p*0.6+struggle*0.35+stage*0.05+Math.random()*0.7}
@@ -221,17 +225,37 @@ function currentData(){return session&&session.queue.length?MAP[session.queue[0]
 function currentRec(){var d=currentData();return d?userRec(d.w):null}
 
 /* ---------- study view ---------- */
+function speakLabel(){return (state.settings.autoSpeak?'自动发音：开':'自动发音：关')+' · '+(state.settings.accent==='uk'?'英音':'美音')}
+function refreshSpeakLabel(){var t=$('speakToggle');if(t)t.textContent=speakLabel()}
+function updatePlan(){
+  var intro=introducedToday(),due=getDue().length;
+  var pct=state.settings.dailyNew?Math.min(100,intro/state.settings.dailyNew*100):100;
+  var a=$('planNew');if(a)a.textContent=intro;
+  var b=$('planDue');if(b)b.textContent=due;
+  var c=$('planPct');if(c)c.textContent=Math.round(pct)+'%';
+  var bar=$('planBar');if(bar)bar.style.width=pct+'%';
+}
+function bindSpeakToggle(){
+  var t=$('speakToggle');if(!t)return;
+  t.onclick=function(){
+    state.settings.autoSpeak=!state.settings.autoSpeak;save();
+    refreshSpeakLabel();
+    var d=currentData();
+    if(state.settings.autoSpeak&&d)speak(d.w);
+    toast('自动发音已'+(state.settings.autoSpeak?'开启':'关闭'));
+  };
+}
 function renderStudy(){
   var intro=introducedToday(),due=getDue().length;
   var pct=state.settings.dailyNew?Math.min(100,intro/state.settings.dailyNew*100):100;
   $('view-study').innerHTML=
    '<div class="section-head"><div><div class="eyebrow">TODAY · '+WORDS.length.toLocaleString()+' WORDS</div><h1 class="page-title">Words</h1></div>'+
-   '<button class="btn flat" id="speakToggle" type="button">'+(state.settings.autoSpeak?'自动发音：开':'自动发音：关')+' · '+(state.settings.accent==='uk'?'英音':'美音')+'</button></div>'+
-   '<div class="plan"><div class="plan-cell"><div class="k">今日新词</div><div class="v">'+intro+'<small>/ '+state.settings.dailyNew+'</small></div></div>'+
-   '<div class="plan-cell"><div class="k">待复习</div><div class="v">'+due+'<small>词</small></div></div></div>'+
-   '<div class="progress"><div class="progress-head"><span>新词计划</span><span>'+Math.round(pct)+'%</span></div><div class="bar"><i style="width:'+pct+'%"></i></div></div>'+
+   '<button class="btn flat" id="speakToggle" type="button">'+speakLabel()+'</button></div>'+
+   '<div class="plan"><div class="plan-cell"><div class="k">今日新词</div><div class="v"><span id="planNew">'+intro+'</span><small>/ '+state.settings.dailyNew+'</small></div></div>'+
+   '<div class="plan-cell"><div class="k">待复习</div><div class="v"><span id="planDue">'+due+'</span><small>词</small></div></div></div>'+
+   '<div class="progress"><div class="progress-head"><span>新词计划</span><span id="planPct">'+Math.round(pct)+'%</span></div><div class="bar"><i id="planBar" style="width:'+pct+'%"></i></div></div>'+
    '<div id="study-card"></div>';
-  var t=$('speakToggle');if(t)t.onclick=function(){state.settings.autoSpeak=!state.settings.autoSpeak;save();renderStudy();toast('自动发音已'+(state.settings.autoSpeak?'开启':'关闭'))};
+  bindSpeakToggle();
 }
 function renderEmpty(){
   var c=$('study-card');if(!c)return;
@@ -244,7 +268,8 @@ function renderEmpty(){
 function renderCard(){
   if(!session){return}
   if(!session.queue.length){finish();return}
-  renderStudy();
+  if(!$('study-card'))renderStudy();
+  updatePlan();refreshSpeakLabel();
   var seq=++renderSeq;
   var d=currentData(),r=currentRec(),item=session.queue[0];
   var stage=item.stage,isNew=item.mode==='new';
@@ -372,6 +397,7 @@ function submit(force){
 }
 function showFeedback(ok,d,askedStage,mode){
   phase='feedback';
+  updatePlan();
   var ans=$('answer');if(ans)ans.disabled=true;
   var s=$('submitBtn'),f=$('failBtn'),h=$('hintBtn'),n=$('nextBtn');
   if(s)s.classList.add('hidden');if(f)f.classList.add('hidden');if(h)h.classList.add('hidden');if(n)n.classList.remove('hidden');
@@ -418,6 +444,7 @@ function showView(n){
   document.querySelectorAll('.tab').forEach(function(t){t.classList.toggle('active',t.dataset.view===n)});
   if(n==='stats')renderStats();
   if(n==='settings')renderSettings();
+  if(n==='study'){refreshSpeakLabel();refreshPronActive();}
   window.scrollTo(0,0);
 }
 function accuracy(){return state.totalAnswers?Math.round(state.totalCorrect/state.totalAnswers*100):0}
