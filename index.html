@@ -162,10 +162,10 @@ var EBB=[10*60*1000,864e5,2*864e5,4*864e5,7*864e5,15*864e5,30*864e5,60*864e5,120
 var MAX_STAGE=EBB.length-1;
 var STAGE_LABELS=['新建','10 分','1 天','2 天','4 天','7 天','15 天','30 天','60 天','120 天','1 年'];
 var STORE='words_v5';
-var DEFAULT={settings:{dailyNew:300,reviewLimit:300,difficulty:'adaptive',accent:'us',speechRate:0.92,autoSpeak:false},words:{},days:{},streak:{count:0,last:null},totalAnswers:0,totalCorrect:0,totalSeconds:0};
+var DEFAULT={settings:{dailyNew:300,reviewLimit:300,level:5,mode:'en2zh',accent:'us',speechRate:0.92,autoSpeak:false},words:{},days:{},streak:{count:0,last:null},totalAnswers:0,totalCorrect:0,totalSeconds:0};
 
 /* ---------- word bank ---------- */
-var WORDS=(window.WORDS_BANK||[]).map(function(a){return {w:a[0],us:a[1]||'',uk:a[2]||'',zh:a[3]||'',pos:a[4]||'',baseLv:a[5]||5,def:a[6]||'',tags:a[7]||'',ex:a[8]||''}});
+var WORDS=(window.WORDS_BANK||[]).map(function(a){return {w:a[0],us:a[1]||'',uk:a[2]||'',zh:a[3]||'',pos:a[4]||'',baseLv:a[5]||5,def:a[6]||'',tags:a[7]||'',ex:a[8]||'',sen:a[9]||''}});
 var MAP={};WORDS.forEach(function(d){MAP[d.w]=d});
 
 /* ---------- state ---------- */
@@ -182,7 +182,7 @@ window.addEventListener('error',function(e){showError(e.error||e.message)});
 
 /* ---------- persistence ---------- */
 function load(){try{var raw=localStorage.getItem(STORE);if(raw)return normalize(JSON.parse(raw))}catch(e){}return JSON.parse(JSON.stringify(DEFAULT))}
-function normalize(o){o=o||{};return {settings:Object.assign({},DEFAULT.settings,o.settings||{}),words:o.words||{},days:o.days||{},streak:Object.assign({},DEFAULT.streak,o.streak||{}),totalAnswers:+o.totalAnswers||0,totalCorrect:+o.totalCorrect||0,totalSeconds:+o.totalSeconds||0}}
+function normalize(o){o=o||{};var st=Object.assign({},DEFAULT.settings,o.settings||{});st.level=Math.max(1,Math.min(10,parseInt(st.level,10)||5));if(st.mode!=='zh2en')st.mode='en2zh';if(st.accent!=='uk')st.accent='us';return {settings:st,words:o.words||{},days:o.days||{},streak:Object.assign({},DEFAULT.streak,o.streak||{}),totalAnswers:+o.totalAnswers||0,totalCorrect:+o.totalCorrect||0,totalSeconds:+o.totalSeconds||0}}
 function save(){try{localStorage.setItem(STORE,JSON.stringify(state))}catch(e){}}
 
 /* ---------- memory model ---------- */
@@ -199,8 +199,8 @@ function refreshPronActive(){
   var ac=state.settings.accent==='uk'?'uk':'us';
   document.querySelectorAll('[data-pron]').forEach(function(b){b.classList.toggle('active',b.dataset.pron===ac)});
 }
-function modeLabel(){var m=state.settings.difficulty;return m==='adaptive'?'自适应':m==='easy'?'基础':m==='mid'?'进阶':m==='hard'?'困难':'挑战'}
-function allowNew(d){var m=state.settings.difficulty;if(m==='adaptive')return true;if(m==='easy')return d.baseLv<=3;if(m==='mid')return d.baseLv>=4&&d.baseLv<=6;if(m==='hard')return d.baseLv>=7&&d.baseLv<=8;if(m==='extreme')return d.baseLv>=9;return true}
+function modeLabel(m){return (m||state.settings.mode)==='zh2en'?'汉译英 · 例句填空':'英译汉'}
+function allowNew(d){return d.baseLv===state.settings.level}
 function priority(d){var r=state.words[d.w];var p=personalLevel(d,r);var struggle=r?((r.productionWrong||0)*2+(r.meaningWrong||0)+(r.hints||0)*0.3):0;var stage=r?(r.stage||0):0;return p*0.6+struggle*0.35+stage*0.05+Math.random()*0.7}
 function getDue(){var t=Date.now();return Object.keys(state.words).filter(function(w){var r=state.words[w];return MAP[w]&&r.seen>0&&r.dueAt<=t}).sort(function(a,b){return (state.words[a].dueAt||0)-(state.words[b].dueAt||0)})}
 function introducedToday(){var t=today(),n=0;Object.keys(state.words).forEach(function(w){var r=state.words[w];if(r.introduced===t&&r.seen>0)n++});return n}
