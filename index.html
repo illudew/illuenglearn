@@ -207,6 +207,17 @@ var state=load(),session=null,phase='question',qStart=0,renderSeq=0,dictCache={}
 function clamp(v,a,b){a=a==null?1:a;b=b==null?10:b;return Math.max(a,Math.min(b,v))}
 function today(){return new Intl.DateTimeFormat('en-CA').format(new Date())}
 function addDays(iso,n){var d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
+function startOfToday(){var d=new Date();d.setHours(0,0,0,0);return d.getTime()}
+/* 今日已作答过的不同单词数（新学 + 复习，含抽查），用于衡量每日任务完成度 */
+function answeredTodayCount(){var s=startOfToday(),n=0;Object.keys(state.words).forEach(function(w){var r=state.words[w];if(r.seen>0&&(r.last||0)>=s)n++});return n}
+/* 每日任务目标 = 今日新词目标 + 当天开始时到期复习数（首次进入当天时固定下来） */
+function ensureDayTarget(){
+  var t=today();if(!state.days[t])state.days[t]={answers:0,correct:0,done:false};
+  var d=state.days[t];
+  if(!d.target){d.target=state.settings.dailyNew+Math.min(getDue().length,state.settings.reviewLimit)}
+  return d;
+}
+function dailyProgress(){var d=state.days[today()];if(!d||!d.target)return 0;return Math.min(1,answeredTodayCount()/d.target)}
 function escapeHtml(s){return String(s==null?'':s).replace(/[&<>'"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]})}
 function toast(s){var x=$('toast');x.textContent=s;x.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(function(){x.classList.remove('show')},1900)}
 function showError(e){var box=$('errorBox');box.textContent='脚本错误：'+(e&&e.message?e.message:e);box.classList.remove('hidden')}
@@ -348,11 +359,13 @@ function speakLabel(){return (state.settings.autoSpeak?'自动发音：开':'自
 function refreshSpeakLabel(){var t=$('speakToggle');if(t)t.textContent=speakLabel()}
 function updatePlan(){
   var intro=introducedToday(),due=getDue().length;
-  var pct=state.settings.dailyNew?Math.min(100,intro/state.settings.dailyNew*100):100;
+  var d=ensureDayTarget();
+  var pct=Math.round(dailyProgress()*100);
   var a=$('planNew');if(a)a.textContent=intro;
   var b=$('planDue');if(b)b.textContent=due;
-  var c=$('planPct');if(c)c.textContent=Math.round(pct)+'%';
+  var c=$('planPct');if(c)c.textContent=pct+'%';
   var bar=$('planBar');if(bar)bar.style.width=pct+'%';
+  var lbl=$('planLabel');if(lbl)lbl.textContent='每日任务 · 目标 '+d.target+' 词'+(d.done?' ✓ 已签到':'（≥80% 签到）');
   refreshPTT();
 }
 function bindSpeakToggle(){
@@ -377,7 +390,8 @@ function bindModeSeg(){
 }
 function renderStudy(){
   var intro=introducedToday(),due=getDue().length;
-  var pct=state.settings.dailyNew?Math.min(100,intro/state.settings.dailyNew*100):100;
+  var day=ensureDayTarget();
+  var pct=Math.round(dailyProgress()*100);
   $('view-study').innerHTML=
    '<div class="section-head"><div><div class="eyebrow">TODAY · '+WORDS.length.toLocaleString()+' WORDS</div><h1 class="page-title">Words</h1></div>'+
    '<div class="head-actions"><button class="btn flat" id="checkBtn" type="button">抽查今日 '+(todayWords().length||'')+'</button><button class="btn flat" id="speakToggle" type="button">'+speakLabel()+'</button></div></div>'+
@@ -388,7 +402,7 @@ function renderStudy(){
    '<div class="seglv" id="segLv">新词难度 <b>Lv.'+state.settings.level+'</b>（设置中可改 1–10）</div>'+
    '<div class="plan"><div class="plan-cell"><div class="k">今日新词</div><div class="v"><span id="planNew">'+intro+'</span><small>/ '+state.settings.dailyNew+'</small></div></div>'+
    '<div class="plan-cell"><div class="k">待复习</div><div class="v"><span id="planDue">'+due+'</span><small>词</small></div></div></div>'+
-   '<div class="progress"><div class="progress-head"><span>新词计划</span><span id="planPct">'+Math.round(pct)+'%</span></div><div class="bar"><i id="planBar" style="width:'+pct+'%"></i></div></div>'+
+   '<div class="progress"><div class="progress-head"><span id="planLabel">每日任务 · 目标 '+day.target+' 词'+(day.done?' ✓ 已签到':'（≥80% 签到）')+'</span><span id="planPct">'+pct+'%</span></div><div class="bar"><i id="planBar" style="width:'+pct+'%"></i></div></div>'+
    '<div id="study-card"></div>';
   bindSpeakToggle();bindModeSeg();
   var cb=$('checkBtn');if(cb)cb.onclick=startCheck;
@@ -403,8 +417,9 @@ function startCheck(){
 }
 function renderEmpty(){
   var c=$('study-card');if(!c)return;
-  c.innerHTML='<div class="finish"><div class="icon">✓</div><h2>今日计划已清空</h2><p>没有到期复习，也没有剩余新词额度。记忆阶段已经排好下一轮复习时间。</p>'+
-   '<div class="actions"><button class="btn ghost" id="extraBtn" type="button">再学一组</button><button class="btn primary" id="statsBtn" type="button">查看统计</button></div></div>';
+  var done=state.days[today()]&&state.days[today()].done;
+  c.innerHTML='<div class="finish"><div class="icon">✓</div><h2>今日计划已清空</h2><p>'+(done?'每日任务已达标，今日签到成功。':'每日任务已达到 80% 才会计入签到。')+'没有到期复习，也没有剩余新词额度。想继续可以「再来一轮」。</p>'+
+   '<div class="actions"><button class="btn ghost" id="extraBtn" type="button">再来一轮</button><button class="btn primary" id="statsBtn" type="button">查看统计</button></div></div>';
   $('extraBtn').onclick=function(){start(true)};$('statsBtn').onclick=function(){showView('stats')};
 }
 
@@ -558,7 +573,7 @@ function submit(force,chosenW){
     /* 连对越多恢复越快，并刷新历史最佳分 */
     r.penalty=Math.max(0,(r.penalty||0)-0.05*(1+r.streak));
     var pb=pBase(d,r);if(pb>(r.pBest||0))r.pBest=pb;
-    session.queue.shift();session.done++;markDay(true);
+    session.queue.shift();session.done++;
   }else{
     session.wrong++;r.errStreak=(r.errStreak||0)+1;
     var shield=shieldOf(r); /* 护盾取自“连对”，须在清零前读取 */
@@ -568,9 +583,12 @@ function submit(force,chosenW){
     r.dueAt=Date.now()+EBB[0];
     var add=Math.max(0,penaltyAdd(d,r,force,md)-shield);
     r.penalty=Math.min((r.penalty||0)+add,((d.baseLv||1)*0.5),PTT.PEN_CAP_ABS);
-    session.queue.push(session.queue.shift()); /* requeue the same word later in this session */
+    /* 未记住/遗忘的词隔几个单词后再出现（而不是排到整轮最后） */
+    var rec=session.queue.shift(),gap=4+Math.floor(Math.random()*5);
+    session.queue.splice(Math.min(gap,session.queue.length),0,rec);
   }
   state.recent.push({o:ok?1:0,f:force?1:0});if(state.recent.length>100)state.recent.shift();
+  markDay(ok);
   save();showFeedback(ok,d,md,r,chosenW,force);
 }
 function showFeedback(ok,d,md,r,chosenW,force){
@@ -616,17 +634,19 @@ function next(){var now=Date.now();if(now-lastNext<200)return;lastNext=now;if(!s
 
 /* ---------- day / streak ---------- */
 function markDay(ok){
-  var t=today();if(!state.days[t])state.days[t]={answers:0,correct:0,done:false};
-  state.days[t].answers++;if(ok)state.days[t].correct++;
-  if(state.days[t].correct>=5){state.days[t].done=true;updateStreak()}
+  var d=ensureDayTarget();
+  d.answers++;if(ok)d.correct++;
+  /* 每日任务完成 ≥80% 才算当日签到成功 */
+  if(!d.done&&dailyProgress()>=0.8){d.done=true;updateStreak();toast('每日任务已达标（≥80%），今日签到成功')}
 }
 function updateStreak(){var t=today(),s=state.streak;if(s.last===t)return;if(s.last&&addDays(s.last,1)===t)s.count++;else s.count=1;s.last=t}
 function finish(){
   var done=session?session.done:0,tot=session?session.total:0,cor=session?session.correct:0;
   session=null;phase='question';save();renderStudy();
   var c=$('study-card');if(!c)return;
-  c.innerHTML='<div class="finish"><div class="icon">✓</div><h2>本轮完成</h2><p>完成 '+done+' / '+tot+' 个词，本轮正确 '+cor+' 次。到期复习永远优先于新词。</p>'+
-   '<div class="actions"><button class="btn ghost" id="extraBtn" type="button">再学一组</button><button class="btn primary" id="statsBtn" type="button">统计</button></div></div>';
+  var signed=state.days[today()]&&state.days[today()].done;
+  c.innerHTML='<div class="finish"><div class="icon">✓</div><h2>本轮完成</h2><p>完成 '+done+' / '+tot+' 个词，本轮正确 '+cor+' 次。'+(signed?'今日任务已达标，签到成功。':'每日任务达到 80% 才算签到，可以再来一轮继续。')+'</p>'+
+   '<div class="actions"><button class="btn ghost" id="extraBtn" type="button">再来一轮</button><button class="btn primary" id="statsBtn" type="button">统计</button></div></div>';
   $('extraBtn').onclick=function(){start(true)};$('statsBtn').onclick=function(){showView('stats')};
 }
 
