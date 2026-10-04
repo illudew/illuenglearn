@@ -144,6 +144,7 @@ button{cursor:pointer}
   <header class="topbar">
     <div class="brand">W<span>O</span>RDS</div>
     <div class="top-meta">
+      <div class="streak" id="pttEl" title="PTT 潜力值">PTT 0.00</div>
       <div class="streak" id="streakEl">0 天</div>
       <div class="sync-dot" id="dataStatus" title="本地词库已就绪"></div>
     </div>
@@ -196,6 +197,20 @@ function save(){try{localStorage.setItem(STORE,JSON.stringify(state))}catch(e){}
 /* ---------- memory model ---------- */
 function userRec(w){var r=state.words[w];if(!r){r={stage:0,dueAt:Date.now(),introduced:null,meaningCorrect:0,productionCorrect:0,meaningWrong:0,productionWrong:0,hints:0,seen:0,correct:0,responseMs:0,streak:0};state.words[w]=r}return r}
 function personalLevel(d,r){r=r||{};var lv=d.baseLv;var wrong=(r.meaningWrong||0)+(r.productionWrong||0);lv+=Math.min(2.4,wrong*0.34);lv-=Math.min(1.4,(r.streak||0)*0.2);lv+=Math.min(1.0,(r.hints||0)*0.06);return clamp(Math.round(lv))}
+/* 熟练度 0..1：记忆阶段为主(80%)，正确率为辅(20%)。答错 stage 会回落，熟练度随之下降。 */
+function proficiency(r){r=r||{};if(!(r.seen>0))return 0;var st=Math.min(MAX_STAGE,r.stage||0)/MAX_STAGE;var acc=(r.correct||0)/r.seen;var p=st*0.8+acc*0.2;return Math.max(0,Math.min(1,p))}
+function proficiencyPct(r){return Math.round(proficiency(r)*100)}
+/* PTT 潜力值：仅统计已进入记忆库的词，各词(难度 × 熟练度)后取平均，满熟练度=100%。 */
+function pttStats(){
+  var sum=0,n=0;Object.keys(state.words).forEach(function(w){var r=state.words[w];if(!r||!(r.seen>0))return;var d=MAP[w];if(!d)return;sum+=(d.baseLv||0)*proficiency(r);n++});
+  return {value:n?sum/n:0,count:n};
+}
+function refreshPTT(){
+  var e=$('pttEl');if(!e)return;
+  var s=pttStats();
+  e.textContent='PTT '+s.value.toFixed(2);
+  e.title='PTT 潜力值：已学 '+s.count+' 词的平均（难度 × 熟练度）。熟练度 = 0.8×记忆阶段 + 0.2×正确率，满熟练度 = 100%。';
+}
 function posCN(pos){return {'noun':'名词','verb':'动词','adjective':'形容词','adverb':'副词','preposition':'介词','pronoun':'代词','conjunction':'连词','number':'数词','article':'冠词','auxiliary':'助动词','interjection':'感叹词','abbreviation':'缩写','plural':'复数'}[(pos||'').toLowerCase()]||'词汇'}
 function tagLabel(t){return {zk:'中考',gk:'高考',cet4:'四级',cet6:'六级',ky:'考研',toefl:'托福',ielts:'雅思',gre:'GRE'}[t]||t}
 function tagsHtml(tags){if(!tags)return '';return tags.split('/').map(function(t){return t?'<span class="tag">'+escapeHtml(tagLabel(t))+'</span>':''}).join('')}
@@ -241,6 +256,7 @@ function updatePlan(){
   var b=$('planDue');if(b)b.textContent=due;
   var c=$('planPct');if(c)c.textContent=Math.round(pct)+'%';
   var bar=$('planBar');if(bar)bar.style.width=pct+'%';
+  refreshPTT();
 }
 function bindSpeakToggle(){
   var t=$('speakToggle');if(!t)return;
@@ -313,7 +329,7 @@ function renderCard(){
          '<input id="answer" class="input" placeholder="输入英文单词" autocomplete="off" autocapitalize="off" spellcheck="false">';
   }
   $('study-card').innerHTML='<div class="card"><div class="card-top"><div class="pills">'+
-     '<span class="pill">'+phLabel+'</span><span class="pill dim">记忆难度 Lv.'+lv+'</span><span class="pill dim">基点 Lv.'+d.baseLv+'</span>'+
+     '<span class="pill">'+phLabel+'</span><span class="pill dim">记忆难度 Lv.'+lv+'</span><span class="pill dim">基点 Lv.'+d.baseLv+'</span><span class="pill dim">熟练度 '+proficiencyPct(r)+'%</span>'+
      '</div><span class="phonetic">'+(session.done+1)+' / '+session.total+'</span></div>'+
      body+
      '<div class="answer-tools">'+
@@ -386,11 +402,23 @@ function hint(){
 }
 
 /* ---------- answering ---------- */
-function normZh(s){return String(s||'').toLowerCase().replace(/[\s，。,；;、/|“”"'()（）\[\]{}·…]/g,'')}
+function normZh(s){return String(s||'').toLowerCase().replace(/[\s，。,；;、/|“”"'()（）\[\]{}·…\-—:：]/g,'')}
+function bigrams(s){var set={},n=0;for(var i=0;i<s.length-1;i++){var g=s.slice(i,i+2);if(!set[g]){set[g]=1;n++}}return {set:set,n:n}}
+function diceCoeff(a,b){if(!a||!b)return 0;if(a===b)return 1;if(a.length<2||b.length<2)return 0;var A=bigrams(a),B=bigrams(b),inter=0;for(var g in A.set){if(B.set[g])inter++}return 2*inter/(A.n+B.n)}
+function commonRun(a,b){var best=0;for(var i=0;i<a.length;i++){for(var j=0;j<b.length;j++){var k=0;while(i+k<a.length&&j+k<b.length&&a[i+k]===b[j+k])k++;if(k>best)best=k}}return best}
 function checkMeaning(input,expected){
   var a=normZh(input);if(a.length<2)return false;
   var parts=expected.split(/[；;，,、/|]/).map(normZh).filter(function(x){return x.length>=1});
-  return parts.some(function(p){return p&&(a===p||a.indexOf(p)>=0||p.indexOf(a)>=0)});
+  /* 1) 精确 / 双向包含（原有判定） */
+  if(parts.some(function(p){return p&&(a===p||a.indexOf(p)>=0||p.indexOf(a)>=0)}))return true;
+  /* 2) 近义模糊：二元组相似度，或共享 ≥2 字连续片段（短词），接纳“一段时间 / 时间跨度”这类等价表达 */
+  return parts.some(function(p){
+    if(!p)return false;
+    if(diceCoeff(a,p)>=0.5)return true;
+    var run=commonRun(a,p);
+    if(run>=2&&Math.min(a.length,p.length)<=6&&a.length<=12)return true;
+    return false;
+  });
 }
 function checkSpelling(input,word){return String(input||'').toLowerCase().replace(/[\s'’-]/g,'')===word.toLowerCase()}
 function submit(force){
@@ -476,18 +504,20 @@ function renderStats(){
   var due=getDue().length;
   var stageDist=new Array(MAX_STAGE+1).fill(0);
   var diffDist=new Array(11).fill(0);
-  var weak=[],lvSum=0;
+  var weak=[],lvSum=0,profSum=0;
   Object.keys(state.words).forEach(function(w){
     var r=state.words[w],d=MAP[w];if(!d)return;
     if(!(r.seen>0))return;
     learned++;
     var st=Math.min(MAX_STAGE,r.stage||0);stageDist[st]++;
-    var lv=personalLevel(d,r);diffDist[lv]++;lvSum+=lv;
+    var lv=personalLevel(d,r);diffDist[lv]++;lvSum+=lv;profSum+=proficiency(r);
     var wrong=(r.meaningWrong||0)+(r.productionWrong||0);
-    if(wrong){weak.push({w:w,wrong:wrong,lv:lv})}
+    if(wrong){weak.push({w:w,wrong:wrong,lv:lv,prof:proficiencyPct(r)})}
   });
   weak.sort(function(a,b){return b.wrong-a.wrong});
   var avgLv=learned?Math.round(lvSum/learned*10)/10:0;
+  var avgProf=learned?Math.round(profSum/learned*100):0;
+  var ptt=pttStats();
   var t=today(),week='';
   for(var i=6;i>=0;i--){var ds=addDays(t,-i),rd=state.days[ds],on=rd&&rd.done;
     week+='<div class="day '+(on?'on':'')+'"><div class="d">'+ds.slice(5)+'</div><div class="v">'+(on?'✓':(rd?rd.correct:'·'))+'</div></div>'}
@@ -495,13 +525,16 @@ function renderStats(){
   stageDist.forEach(function(n,i){bars+='<div class="dist"><span class="lab">'+STAGE_LABELS[i]+'</span><span class="track"><i style="width:'+(n/mx*100)+'%"></i></span><span class="num">'+n+'</span></div>'});
   var dmx=Math.max.apply(null,[1].concat(diffDist.slice(1,11))),dbars='';
   for(var L=1;L<=10;L++){dbars+='<div class="dist"><span class="lab">Lv.'+L+'</span><span class="track"><i style="width:'+(diffDist[L]/dmx*100)+'%"></i></span><span class="num">'+diffDist[L]+'</span></div>'}
-  var weakHtml=weak.slice(0,8).map(function(x){return '<div class="weak-row"><div><div class="weak-word">'+escapeHtml(x.w)+'</div><div class="weak-meta">记忆难度 Lv.'+x.lv+'</div></div><div class="weak-meta">错 '+x.wrong+' 次</div></div>'}).join('')||'<div class="tiny">暂时没有高频错词。</div>';
+  var weakHtml=weak.slice(0,8).map(function(x){return '<div class="weak-row"><div><div class="weak-word">'+escapeHtml(x.w)+'</div><div class="weak-meta">记忆难度 Lv.'+x.lv+' · 熟练度 '+x.prof+'%</div></div><div class="weak-meta">错 '+x.wrong+' 次</div></div>'}).join('')||'<div class="tiny">暂时没有高频错词。</div>';
   $('view-stats').innerHTML=
    '<div class="section-head"><div><div class="eyebrow">MEMORY PROFILE</div><h1 class="page-title">统计</h1></div><div class="tiny">基点难度自动分级 1–10</div></div>'+
-   '<div class="grid2"><div class="stat"><div class="k">连续打卡</div><div class="v">'+(state.streak.count||0)+'<small>天</small></div></div>'+
+   '<div class="grid2"><div class="stat"><div class="k">PTT 潜力值</div><div class="v">'+ptt.value.toFixed(2)+'<small>/ 10</small></div></div>'+
+   '<div class="stat"><div class="k">平均熟练度</div><div class="v">'+avgProf+'<small>%</small></div></div>'+
+   '<div class="stat"><div class="k">连续打卡</div><div class="v">'+(state.streak.count||0)+'<small>天</small></div></div>'+
    '<div class="stat"><div class="k">已进入记忆库</div><div class="v">'+learned.toLocaleString()+'<small>词</small></div></div>'+
    '<div class="stat"><div class="k">总正确率</div><div class="v">'+accuracy()+'<small>%</small></div></div>'+
    '<div class="stat"><div class="k">待复习</div><div class="v">'+due.toLocaleString()+'<small>词</small></div></div></div>'+
+   '<div class="panel"><div class="panel-title">PTT 潜力值</div><div class="tiny">PTT = 已学 '+ptt.count.toLocaleString()+' 个词的平均（难度 × 熟练度），满熟练度 = 100%，量程 0–10。每个词的熟练度 = 0.8×记忆阶段 + 0.2×正确率，答错会使记忆阶段回落后熟练度随之下降。</div></div>'+
    '<div class="panel"><div class="panel-title">最近 7 天</div><div class="week">'+week+'</div></div>'+
    '<div class="panel"><div class="panel-title">记忆阶段分布</div><div class="tiny">阶段越高，下一次复习间隔越长；答错会回落到 10 分钟强化。</div>'+bars+'</div>'+
    '<div class="panel"><div class="panel-title">个人记忆难度</div><div class="tiny">当前平均 Lv.'+avgLv+'，由词库基点叠加你的错误、提示与连续正确动态修正。</div>'+dbars+'</div>'+
@@ -544,7 +577,7 @@ function renderSettings(){
 function exportData(){var blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='words-backup-'+today()+'.json';a.click();URL.revokeObjectURL(url);toast('备份已导出')}
 function importData(e){var f=e.target.files&&e.target.files[0];if(!f)return;var fr=new FileReader();fr.onload=function(){try{state=normalize(JSON.parse(fr.result));save();session=null;renderAll();toast('备份导入成功')}catch(err){toast('文件格式错误')}};fr.readAsText(f);e.target.value=''}
 function resetData(){if(!confirm('确定清空全部学习记录？内置词库不会删除。'))return;state=JSON.parse(JSON.stringify(DEFAULT));save();session=null;renderAll();toast('学习记录已清空')}
-function renderStreak(){$('streakEl').textContent='连续 '+(state.streak.count||0)+' 天'}
+function renderStreak(){$('streakEl').textContent='连续 '+(state.streak.count||0)+' 天';refreshPTT()}
 
 /* ---------- keyboard ---------- */
 document.addEventListener('keydown',function(e){
