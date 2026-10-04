@@ -191,7 +191,7 @@ var EBB=[10*60*1000,864e5,2*864e5,4*864e5,7*864e5,15*864e5,30*864e5,60*864e5,120
 var MAX_STAGE=EBB.length-1;
 var STAGE_LABELS=['新建','10 分','1 天','2 天','4 天','7 天','15 天','30 天','60 天','120 天','1 年'];
 var STORE='words_v5';
-/* Potential 模型参数：对数总量制 —— ptt = 2·log10(100×Σ(熟练度×等级)/55000)，下限 0 */
+/* Potential 模型参数：对数总量制 —— ptt = 10·log10(100×Σ(熟练度×等级)/55000)，下限 0 */
 var PTT={BASE_PEN:0.15,PEN_CAP_ABS:2.0,PEN_TO_PROF:0.10,ERR_W:0.30,FORGET_W:0.20,GPEN_CAP:0.50,SHIELD_CAP:0.5,DECAY:0.95,TARGET:55000};
 var DEFAULT={settings:{dailyNew:300,reviewLimit:300,level:5,mode:'en2zh',accent:'us',speechRate:0.92,autoSpeak:false},words:{},days:{},streak:{count:0,last:null},totalAnswers:0,totalCorrect:0,totalSeconds:0,recent:[]};
 
@@ -273,8 +273,8 @@ function recentRates(){
   return {err:e/n,forget:f/n};
 }
 /* Potential 总量：Σ(单单词潜在值)，再对近期错误/忘记做一次整体折扣。
-   ptt = 2·log10(100 × Σ / 55000)，小于 0 取 0。
-   参考量级：550 个满分 Lv.10 词 ≈ 2.0000；一万个满分词 ≈ 5.19。 */
+   ptt = 10·log10(100 × Σ / 55000)，小于 0 取 0。
+   参考量级：550 个满分 Lv.10 词 ≈ 10.0000；一万个满分词 ≈ 22.60。 */
 function pttStats(){
   var sum=0,count=0;
   Object.keys(state.words).forEach(function(w){
@@ -284,7 +284,7 @@ function pttStats(){
   var rr=recentRates();
   var gpen=Math.min(PTT.GPEN_CAP,PTT.ERR_W*rr.err+PTT.FORGET_W*rr.forget);
   var adj=sum*(1-gpen);
-  var ptt=adj>0?2*Math.log10(100*adj/PTT.TARGET):0;
+  var ptt=adj>0?10*Math.log10(100*adj/PTT.TARGET):0;
   if(!isFinite(ptt)||ptt<0)ptt=0;
   return {ptt:ptt,sum:sum,adj:adj,gpen:gpen,count:count,err:rr.err,forget:rr.forget};
 }
@@ -293,7 +293,7 @@ function refreshPTT(){
   var e=$('pttEl');
   if(e){
     e.textContent='Potential '+s.ptt.toFixed(4);
-    e.title='Potential（潜在总量）：Σ(熟练度×单词等级) = '+s.sum.toFixed(2)+'，另有近期错误折扣 −'+(s.gpen*100).toFixed(0)+'%。已学 '+s.count+' 词。ptt = 2·log10(100×Σ/55000)，下限 0。';
+    e.title='Potential（潜在总量）：Σ(熟练度×单词等级) = '+s.sum.toFixed(2)+'，另有近期错误折扣 −'+(s.gpen*100).toFixed(0)+'%。已学 '+s.count+' 词。ptt = 10·log10(100×Σ/55000)，下限 0。';
   }
   return s;
 }
@@ -725,7 +725,7 @@ function renderStats(){
    '<div class="stat"><div class="k">已进入记忆库</div><div class="v">'+learned.toLocaleString()+'<small>词</small></div></div>'+
    '<div class="stat"><div class="k">总正确率</div><div class="v">'+accuracy()+'<small>%</small></div></div>'+
    '<div class="stat"><div class="k">待复习</div><div class="v">'+due.toLocaleString()+'<small>词</small></div></div></div>'+
-   '<div class="panel"><div class="panel-title">Potential · 对数总量制</div><div class="tiny">统计已学 '+ptt.count.toLocaleString()+' 个词。<b>ptt = 2 · log₁₀ ( 100 × Σ(熟练度×单词等级) / 55000 )</b>，小于 0 取 0。<br>熟练度 = 记忆阶段（80%）+ 正确率（20%）；错误惩罚按比例折算为熟练度扣减（单单词惩罚上限 min(等级×0.5, '+PTT.PEN_CAP_ABS+')，每天自然衰减 '+Math.round((1-PTT.DECAY)*100)+'%，护盾上限 '+PTT.SHIELD_CAP+'）。再叠加近 100 次复习的错误/忘记折扣（最多 −'+(PTT.GPEN_CAP*100)+'%）。<br>参考量级：550 个满分 Lv.10 词 ≈ 2.0000，一万个满分词 ≈ 5.19。</div></div>'+
+   '<div class="panel"><div class="panel-title">Potential · 对数总量制</div><div class="tiny">统计已学 '+ptt.count.toLocaleString()+' 个词。<b>ptt = 10 · log₁₀ ( 100 × Σ(熟练度×单词等级) / 55000 )</b>，小于 0 取 0。<br>熟练度 = 记忆阶段（80%）+ 正确率（20%）；错误惩罚按比例折算为熟练度扣减（单单词惩罚上限 min(等级×0.5, '+PTT.PEN_CAP_ABS+')，每天自然衰减 '+Math.round((1-PTT.DECAY)*100)+'%，护盾上限 '+PTT.SHIELD_CAP+'）。再叠加近 100 次复习的错误/忘记折扣（最多 −'+(PTT.GPEN_CAP*100)+'%）。<br>参考量级：550 个满分 Lv.10 词 ≈ 10.0000，一万个满分词 ≈ 22.60。</div></div>'+
    '<div class="panel"><div class="panel-title">最近 7 天</div><div class="week">'+week+'</div></div>'+
    '<div class="panel"><div class="panel-title">记忆阶段分布</div><div class="tiny">阶段越高，下一次复习间隔越长；答错会回落到 10 分钟强化。</div>'+bars+'</div>'+
    '<div class="panel"><div class="panel-title">个人记忆难度</div><div class="tiny">当前平均 Lv.'+avgLv+'，由词库基点叠加你的错误、提示与连续正确动态修正。</div>'+dbars+'</div>'+
