@@ -347,7 +347,7 @@ function renderCard(){
   $('submitBtn').onclick=function(){submit(false)};
   $('nextBtn').onclick=next;
   qStart=performance.now();phase='question';
-  var input=$('answer');if(input){input.focus();input.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();submit(false)}})}
+  var input=$('answer');if(input){input.focus();input.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();e.stopPropagation();submit(false)}})}
   if(state.settings.autoSpeak)setTimeout(function(){if(seq===renderSeq)speak(d.w,ac)},100);
 }
 function clozeSentence(sen,w){
@@ -407,11 +407,14 @@ function bigrams(s){var set={},n=0;for(var i=0;i<s.length-1;i++){var g=s.slice(i
 function diceCoeff(a,b){if(!a||!b)return 0;if(a===b)return 1;if(a.length<2||b.length<2)return 0;var A=bigrams(a),B=bigrams(b),inter=0;for(var g in A.set){if(B.set[g])inter++}return 2*inter/(A.n+B.n)}
 function commonRun(a,b){var best=0;for(var i=0;i<a.length;i++){for(var j=0;j<b.length;j++){var k=0;while(i+k<a.length&&j+k<b.length&&a[i+k]===b[j+k])k++;if(k>best)best=k}}return best}
 function checkMeaning(input,expected){
-  var a=normZh(input);if(a.length<2)return false;
+  var a=normZh(input);if(!a)return false;
   var parts=expected.split(/[；;，,、/|]/).map(normZh).filter(function(x){return x.length>=1});
-  /* 1) 精确 / 双向包含（原有判定） */
-  if(parts.some(function(p){return p&&(a===p||a.indexOf(p)>=0||p.indexOf(a)>=0)}))return true;
-  /* 2) 近义模糊：二元组相似度，或共享 ≥2 字连续片段（短词），接纳“一段时间 / 时间跨度”这类等价表达 */
+  /* 1) 精确匹配：单字也要接受（如 be → 是 / 在） */
+  if(parts.some(function(p){return p&&a===p}))return true;
+  if(a.length<2)return false; /* 单字只认精确匹配，避免“子”误判进“桌子” */
+  /* 2) 双向包含（原有判定） */
+  if(parts.some(function(p){return p&&(a.indexOf(p)>=0||p.indexOf(a)>=0)}))return true;
+  /* 3) 近义模糊：二元组相似度，或共享 ≥2 字连续片段（短词），接纳“一段时间 / 时间跨度”这类等价表达 */
   return parts.some(function(p){
     if(!p)return false;
     if(diceCoeff(a,p)>=0.5)return true;
@@ -583,6 +586,7 @@ function renderStreak(){$('streakEl').textContent='连续 '+(state.streak.count|
 document.addEventListener('keydown',function(e){
   if(e.key!=='Enter')return;
   if(!session)return;
+  if(e.target&&e.target.id==='answer')return; /* 输入框中的回车由它自己的处理器负责，避免同一次回车既提交又跳词 */
   if(phase==='feedback'){e.preventDefault();next()}
 });
 
