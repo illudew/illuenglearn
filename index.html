@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0e1014">
-<title>雅思背单词 · IELTS Words</title>
+<title>雅思背单词</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
@@ -20,53 +20,45 @@ body{
 }
 #app{width:100%;max-width:560px;flex:1;display:flex;flex-direction:column;padding-bottom:86px}
 
-/* ---------- 顶栏 ---------- */
-.topbar{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:18px 20px 10px;
-}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 10px}
 .logo{font-weight:700;font-size:18px;letter-spacing:.5px}
 .logo span{color:var(--accent)}
-.streak{
-  font-size:13px;color:var(--muted);background:var(--card);
-  border:1px solid var(--line);padding:6px 12px;border-radius:999px;
-}
+.streak{font-size:13px;color:var(--muted);background:var(--card);
+  border:1px solid var(--line);padding:6px 12px;border-radius:999px}
 
-/* ---------- 视图 ---------- */
 .main{flex:1;padding:0 16px}
 .view{animation:fade .25s ease}
 .hidden{display:none !important}
 @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-/* ---------- 进度条 ---------- */
 .bar-wrap{margin-bottom:14px}
-.bar-head{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-bottom:7px}
+.bar-head{display:flex;justify-content:space-between;font-size:12.5px;
+  color:var(--muted);margin-bottom:7px}
 .bar{height:7px;background:var(--card2);border-radius:99px;overflow:hidden}
 .bar i{display:block;height:100%;width:0;border-radius:99px;
   background:linear-gradient(90deg,var(--accent),var(--accent2));
   transition:width .35s cubic-bezier(.4,0,.2,1)}
 
-/* ---------- 卡片 ---------- */
-.card{
-  background:var(--card);border:1px solid var(--line);border-radius:20px;
-  padding:22px 20px 20px;box-shadow:0 12px 34px rgba(0,0,0,.28);
-}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;
+  padding:22px 20px 20px;box-shadow:0 12px 34px rgba(0,0,0,.28)}
 .card-head{display:flex;gap:8px;margin-bottom:18px}
 .pill{font-size:11.5px;padding:4px 11px;border-radius:99px;
-  background:rgba(79,140,255,.14);color:var(--accent2);border:1px solid rgba(79,140,255,.28)}
+  background:rgba(79,140,255,.14);color:var(--accent2);
+  border:1px solid rgba(79,140,255,.28)}
 .pill.dim{background:var(--card2);color:var(--muted);border-color:var(--line)}
+
 .zh{font-size:25px;font-weight:650;line-height:1.4;margin-bottom:12px}
 .en{font-size:15px;color:#b9c1d1;line-height:1.65;margin-bottom:6px}
 .en .blank{color:var(--accent2);letter-spacing:2px;font-weight:600}
-.hint{font-size:13px;color:#c9a24a;margin-top:10px;line-height:1.6;word-break:break-all}
+.hint{font-size:13px;color:#c9a24a;margin-top:10px;line-height:1.6;
+  word-break:break-all}
 .hint:empty{display:none}
 
-.answer{
-  width:100%;margin-top:20px;padding:15px 16px;font-size:19px;letter-spacing:1px;
-  background:var(--card2);border:1.5px solid var(--line);border-radius:14px;
-  color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s;
-  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-}
+.answer{width:100%;margin-top:20px;padding:15px 16px;font-size:19px;
+  letter-spacing:1px;background:var(--card2);border:1.5px solid var(--line);
+  border-radius:14px;color:var(--text);outline:none;
+  transition:border-color .2s,box-shadow .2s;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .answer:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(79,140,255,.13)}
 .answer:disabled{opacity:.75}
 .answer::placeholder{color:#5c6478;font-family:inherit;letter-spacing:0}
@@ -78,40 +70,34 @@ body{
 
 .btns{display:flex;gap:10px;margin-top:18px}
 .btns.center{justify-content:center}
-.btn{
-  flex:1;padding:13px 16px;border-radius:13px;border:1px solid transparent;
-  font-size:15px;font-weight:600;cursor:pointer;transition:.18s;font-family:inherit;
-}
+.btn{flex:1;padding:13px 16px;border-radius:13px;border:1px solid transparent;
+  font-size:15px;font-weight:600;cursor:pointer;transition:.18s;
+  font-family:inherit}
 .btn:active{transform:scale(.975)}
-.btn.primary{background:linear-gradient(135deg,var(--accent),#3d6fe0);color:#fff;
-  box-shadow:0 6px 18px rgba(79,140,255,.28)}
+.btn.primary{background:linear-gradient(135deg,var(--accent),#3d6fe0);
+  color:#fff;box-shadow:0 6px 18px rgba(79,140,255,.28)}
 .btn.ghost{background:var(--card2);color:#c3cad9;border-color:var(--line)}
 .btn.ghost:hover{border-color:#3a4150}
-.btn.danger{background:rgba(248,113,113,.12);color:var(--bad);border-color:rgba(248,113,113,.3)}
+.btn.danger{background:rgba(248,113,113,.12);color:var(--bad);
+  border-color:rgba(248,113,113,.3)}
 
-/* ---------- 完成页 ---------- */
 #finishArea{text-align:center;padding:44px 22px;background:var(--card);
   border:1px solid var(--line);border-radius:20px}
 .finish-emoji{font-size:52px;margin-bottom:10px}
 #finishArea h2{margin:6px 0 8px;font-size:21px}
 #finishArea p{color:var(--muted);font-size:14px;margin:4px 0;line-height:1.7}
 
-/* ---------- 底部导航 ---------- */
-.tabbar{
-  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+.tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
   width:100%;max-width:560px;display:flex;
   background:rgba(18,21,27,.94);backdrop-filter:blur(14px);
-  border-top:1px solid var(--line);padding:8px 0 calc(8px + env(safe-area-inset-bottom));
-}
-.tab{
-  flex:1;background:none;border:none;color:#666e80;font-size:11.5px;
+  border-top:1px solid var(--line);
+  padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
+.tab{flex:1;background:none;border:none;color:#666e80;font-size:11.5px;
   display:flex;flex-direction:column;align-items:center;gap:3px;
-  padding:5px 0;cursor:pointer;font-family:inherit;transition:color .2s;
-}
+  padding:5px 0;cursor:pointer;font-family:inherit;transition:color .2s}
 .tab span{font-size:19px;line-height:1}
 .tab.active{color:var(--accent)}
 
-/* ---------- 统计 ---------- */
 h2.page-title{font-size:19px;margin:6px 0 16px}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;
   padding:16px 16px 18px;margin-bottom:14px}
@@ -119,64 +105,70 @@ h2.page-title{font-size:19px;margin:6px 0 16px}
 .muted{color:var(--muted);font-size:12.5px;line-height:1.7;margin:0 0 10px}
 
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+.stat{background:var(--card);border:1px solid var(--line);
+  border-radius:16px;padding:16px}
 .stat .k{font-size:11.5px;color:var(--muted);margin-bottom:6px}
 .stat .v{font-size:24px;font-weight:700}
 .stat .v small{font-size:12px;color:var(--muted);font-weight:500;margin-left:3px}
 
 .week{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
-.day{background:var(--card2);border-radius:11px;padding:9px 0;text-align:center;
-  border:1px solid var(--line)}
+.day{background:var(--card2);border-radius:11px;padding:9px 0;
+  text-align:center;border:1px solid var(--line)}
 .day span{display:block;font-size:10.5px;color:var(--muted);margin-bottom:4px}
 .day i{font-style:normal;font-size:13px;color:#3d4452}
 .day.on{background:rgba(52,211,153,.12);border-color:rgba(52,211,153,.35)}
 .day.on i{color:var(--ok)}
 
 .distrow{display:flex;align-items:center;gap:9px;margin-bottom:8px;font-size:11.5px}
-.distrow .lb{width:52px;color:var(--muted);flex-shrink:0}
-.distrow .track{flex:1;height:8px;background:var(--card2);border-radius:99px;overflow:hidden}
+.distrow .lb{width:56px;color:var(--muted);flex-shrink:0}
+.distrow .track{flex:1;height:8px;background:var(--card2);
+  border-radius:99px;overflow:hidden}
 .distrow .track i{display:block;height:100%;border-radius:99px;
-  background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s}
-.distrow .nm{width:32px;text-align:right;color:var(--muted);flex-shrink:0}
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  transition:width .4s}
+.distrow .nm{width:36px;text-align:right;color:var(--muted);flex-shrink:0}
 
-/* ---------- 设置 ---------- */
 .levels{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 .lvbtn{padding:11px 0;border-radius:11px;border:1px solid var(--line);
   background:var(--card2);color:#b6bdcc;font-size:13px;font-weight:600;
   cursor:pointer;font-family:inherit;transition:.16s}
 .lvbtn:hover{border-color:#3a4150}
-.lvbtn.on{background:linear-gradient(135deg,var(--accent),#3d6fe0);color:#fff;
-  border-color:transparent;box-shadow:0 5px 14px rgba(79,140,255,.3)}
+.lvbtn.on{background:linear-gradient(135deg,var(--accent),#3d6fe0);
+  color:#fff;border-color:transparent;box-shadow:0 5px 14px rgba(79,140,255,.3)}
 
 .row{display:flex;align-items:center;gap:14px}
-input[type=range]{flex:1;-webkit-appearance:none;height:5px;border-radius:99px;
-  background:var(--card2);outline:none}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;
-  border-radius:50%;background:var(--accent);cursor:pointer;
+input[type=range]{flex:1;-webkit-appearance:none;height:5px;
+  border-radius:99px;background:var(--card2);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;
+  height:20px;border-radius:50%;background:var(--accent);cursor:pointer;
   box-shadow:0 2px 8px rgba(79,140,255,.5)}
-input[type=range]::-moz-range-thumb{width:20px;height:20px;border:none;border-radius:50%;
-  background:var(--accent);cursor:pointer}
-.num{width:38px;text-align:center;font-size:14px;font-weight:650;color:var(--accent2)}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border:none;
+  border-radius:50%;background:var(--accent);cursor:pointer}
+.num{width:38px;text-align:center;font-size:14px;font-weight:650;
+  color:var(--accent2)}
 
-.toast{
-  position:fixed;left:50%;bottom:104px;transform:translate(-50%,14px);
+.toast{position:fixed;left:50%;bottom:104px;transform:translate(-50%,14px);
   background:#232833;border:1px solid var(--line);color:var(--text);
   padding:10px 20px;border-radius:99px;font-size:13.5px;opacity:0;
-  pointer-events:none;transition:.25s;z-index:99;white-space:nowrap;
-}
+  pointer-events:none;transition:.25s;z-index:99;white-space:nowrap}
 .toast.show{opacity:1;transform:translate(-50%,0)}
+
+#errBox{display:none;margin:12px 16px;padding:12px 14px;border-radius:12px;
+  background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.35);
+  color:#fca5a5;font-size:12.5px;line-height:1.6;white-space:pre-wrap}
 </style>
 </head>
 <body>
-<div id="app">
 
+<div id="errBox"></div>
+
+<div id="app">
   <header class="topbar">
     <div class="logo">IELTS <span>Words</span></div>
     <div class="streak" id="streakEl">🔥 0 天</div>
   </header>
 
   <main class="main">
-    <!-- ===== 学习 ===== -->
     <section id="view-study" class="view">
       <div class="bar-wrap">
         <div class="bar-head"><span id="barLeft">准备中…</span><span id="barRight"></span></div>
@@ -194,12 +186,12 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border:none;border-ra
           <div class="hint" id="hint"></div>
           <input id="answer" class="answer" type="text" autocomplete="off"
                  autocorrect="off" autocapitalize="none" spellcheck="false"
-                 placeholder="输入英文单词" />
+                 placeholder="输入英文单词">
           <div class="fb" id="fb"></div>
           <div class="btns">
-            <button class="btn ghost" id="btnHint">提示</button>
-            <button class="btn primary" id="btnSubmit">提交</button>
-            <button class="btn primary hidden" id="btnNext">继续</button>
+            <button class="btn ghost" id="btnHint" type="button">提示</button>
+            <button class="btn primary" id="btnSubmit" type="button">提交</button>
+            <button class="btn primary hidden" id="btnNext" type="button">继续</button>
           </div>
         </div>
       </div>
@@ -209,732 +201,755 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border:none;border-ra
         <h2 id="finishTitle">今日任务完成</h2>
         <p id="finishDesc"></p>
         <div class="btns center" style="max-width:340px;margin:22px auto 0">
-          <button class="btn ghost" id="btnExtra">再来一组</button>
-          <button class="btn primary" id="btnStats">查看统计</button>
+          <button class="btn ghost" id="btnExtra" type="button">再来一组</button>
+          <button class="btn primary" id="btnStats" type="button">查看统计</button>
         </div>
       </div>
     </section>
 
-    <!-- ===== 统计 ===== -->
     <section id="view-stats" class="view hidden"></section>
-
-    <!-- ===== 设置 ===== -->
     <section id="view-settings" class="view hidden"></section>
   </main>
 
   <nav class="tabbar">
-    <button class="tab active" data-view="study"><span>📖</span>学习</button>
-    <button class="tab" data-view="stats"><span>📊</span>统计</button>
-    <button class="tab" data-view="settings"><span>⚙️</span>设置</button>
+    <button class="tab active" data-view="study" type="button"><span>📖</span>学习</button>
+    <button class="tab" data-view="stats" type="button"><span>📊</span>统计</button>
+    <button class="tab" data-view="settings" type="button"><span>⚙️</span>设置</button>
   </nav>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-/* ==========================================================
-   雅思词库（10 个难度等级，每级 12 词）
-   格式： 单词 | 中文释义 | 例句（___ 为挖空处） | 难度等级
-   ========================================================== */
-const RAW_WORDS = `
-abandon|放弃，抛弃|They had to ___ the car in the snow.|1
-absorb|吸收；使全神贯注|Plants ___ water through their roots.|1
-abstract|抽象的；摘要|Beauty is an ___ concept.|1
-academic|学术的；学业的|She has a strong ___ background.|1
-accurate|准确的，精确的|The report must be ___ and fair.|1
-achieve|实现，达到|You can ___ your goals with hard work.|1
-adapt|适应；改编|Children ___ quickly to new environments.|1
-admire|钦佩，赞赏|I ___ her courage and honesty.|1
-advantage|优势，好处|Being bilingual is a real ___.|1
-affect|影响；感动|Climate change will ___ us all.|1
-agriculture|农业|___ is vital to the local economy.|1
-ancient|古代的，古老的|We visited an ___ temple in Rome.|1
-anticipate|预期，预料|We ___ a rise in prices next year.|2
-anxious|焦虑的，担忧的|She felt ___ before the interview.|2
-apparent|明显的；表面上的|It was ___ that he was lying.|2
-appreciate|欣赏；感激；理解|I really ___ your help.|2
-approach|方法；接近|We need a new ___ to this problem.|2
-appropriate|适当的，恰当的|Wear ___ clothes for the interview.|2
-approve|批准；赞成|The board will ___ the budget tomorrow.|2
-argue|争论；主张|They often ___ about money.|2
-arrange|安排；整理|Can you ___ a meeting for Friday?|2
-assess|评估，评价|Teachers ___ students' progress each term.|2
-assist|帮助，协助|Volunteers ___ the elderly with shopping.|2
-assume|假定；承担|Don't ___ that everyone agrees with you.|2
-attitude|态度，看法|A positive ___ helps you succeed.|3
-authority|权威；当局|The local ___ closed the road.|3
-aware|意识到的，知道的|Are you ___ of the risks?|3
-benefit|利益；受益|Regular exercise will ___ your health.|3
-bias|偏见，偏向|The report showed a clear ___ against women.|3
-brief|简短的；简要介绍|He gave a ___ summary of the plan.|3
-burden|负担，重担|Caring for a sick relative is a heavy ___.|3
-campaign|运动，活动|They launched a ___ to save the forest.|3
-capable|有能力的，能干的|She is ___ of handling the project alone.|3
-category|类别，种类|Which ___ does this book belong to?|3
-circumstance|情况，环境|Under no ___ should you give up.|3
-commit|承诺；犯（罪）|She decided to ___ herself to the cause.|3
-compensate|补偿，赔偿|The company agreed to ___ the workers.|4
-competent|有能力的，胜任的|He is a ___ and reliable employee.|4
-complex|复杂的；综合体|The human brain is extremely ___.|4
-comprehensive|全面的，综合的|We need a ___ review of the policy.|4
-concentrate|集中；专心|It is hard to ___ in a noisy room.|4
-conclusion|结论；结束|We reached the same ___ independently.|4
-conduct|进行；行为|They will ___ a survey next month.|4
-confident|自信的，有把握的|She feels ___ about the exam.|4
-consequence|后果，结果|Every decision has a ___.|4
-considerable|相当大的，可观的|The project required ___ investment.|4
-constant|不断的，持续的|The machine requires ___ maintenance.|4
-constitute|构成，组成|Women ___ half of the workforce.|4
-contribute|贡献；促成|Everyone should ___ to the discussion.|5
-controversial|有争议的|The new law is highly ___.|5
-convention|惯例；大会|It is a social ___ to shake hands.|5
-convince|说服，使信服|He tried to ___ me to stay.|5
-crucial|至关重要的|Timing is ___ to the success of the plan.|5
-cultivate|培养；耕作|Farmers ___ rice in these fields.|5
-currency|货币|The local ___ has lost value.|5
-decline|下降；拒绝|Sales began to ___ last year.|5
-dedicate|奉献，致力于|She chose to ___ her life to research.|5
-deficit|赤字，亏损|The country faces a huge trade ___.|5
-deliberate|故意的；深思熟虑的|It was a ___ attempt to mislead us.|5
-demonstrate|证明；示范；游行|The results ___ a clear link between the two.|5
-derive|源自；获得|Many English words ___ from Latin.|6
-diminish|减少，削弱|His influence began to ___ over time.|6
-discriminate|歧视；区分|It is illegal to ___ against older workers.|6
-dismiss|解雇；驳回|The manager decided to ___ the complaint.|6
-dispute|争论，纠纷|The two sides are in a long ___ over land.|6
-distinct|明显的；不同的|There is a ___ difference between the two.|6
-diverse|多样的，不同的|The city has a ___ population.|6
-dominate|支配，主导|A few firms ___ the market.|6
-durable|耐用的|These boots are cheap but ___.|6
-elaborate|详尽的；详细阐述|Could you ___ on that point?|6
-eliminate|消除，淘汰|The new system will ___ most errors.|6
-emerge|出现，浮现|New problems ___ every week.|6
-emphasize|强调|I must ___ the importance of safety.|7
-endure|忍受；持续|They had to ___ years of hardship.|7
-enhance|提高，增强|Good lighting can ___ the mood.|7
-enormous|巨大的|The project required an ___ amount of money.|7
-equivalent|等同的；等价物|One mile is ___ to about 1.6 kilometres.|7
-essential|必要的，本质的|Water is ___ for life.|7
-establish|建立，确立|They hope to ___ a new charity.|7
-estimate|估计，估算|Experts ___ the damage at two million dollars.|7
-evaluate|评估，评价|We must ___ the results carefully.|7
-evident|明显的，显然的|It is ___ that the plan failed.|7
-evolve|进化，演变|Languages ___ slowly over time.|7
-exceed|超过，超越|Costs must not ___ the budget.|7
-exclude|排除，不包括|We cannot ___ the possibility of rain.|8
-exploit|利用；剥削|Some companies ___ cheap labour abroad.|8
-facilitate|促进，使便利|The new road will ___ trade.|8
-fluctuate|波动，起伏|Prices ___ with the seasons.|8
-framework|框架，结构|The report sets out a legal ___.|8
-fundamental|基本的，根本的|Trust is ___ to any relationship.|8
-generate|产生，生成|Wind farms ___ clean electricity.|8
-genuine|真正的，真诚的|She showed ___ concern for others.|8
-hypothesis|假设，假说|The data supports his ___.|8
-identical|完全相同的|The two copies are ___.|8
-illustrate|说明，举例说明|These figures ___ the scale of the problem.|8
-imply|暗示，意味着|His silence seemed to ___ agreement.|8
-impose|强加；征收|The government may ___ new taxes.|9
-incentive|激励，动机|Bonuses act as an ___ to work harder.|9
-inevitable|不可避免的|Change is ___ in any organisation.|9
-infrastructure|基础设施|The country needs better ___.|9
-inherent|固有的，内在的|There are ___ risks in this approach.|9
-initiate|开始，发起|They plan to ___ a new research project.|9
-innovate|创新|Firms must ___ to stay competitive.|9
-integrate|整合，融入|Schools help immigrants ___ into society.|9
-intervene|干预，介入|The government chose not to ___.|9
-justify|证明…正当|Nothing can ___ such cruelty.|9
-legitimate|合法的，合理的|That is a ___ concern.|9
-manipulate|操纵，控制|They tried to ___ public opinion.|9
-mitigate|减轻，缓和|Measures to ___ climate change are urgent.|10
-notorious|臭名昭著的|The area is ___ for its crime.|10
-obsolete|过时的，淘汰的|These machines are now ___.|10
-paradox|悖论，矛盾|It is a ___ that the poor often pay more.|10
-perceive|察觉，认为|People ___ risk in different ways.|10
-persist|坚持；持续|If symptoms ___, see a doctor.|10
-plausible|似乎合理的|That sounds like a ___ explanation.|10
-prevail|盛行；获胜|Common sense will ___ in the end.|10
-profound|深刻的，深远的|The war had a ___ effect on society.|10
-reinforce|加强，强化|The results ___ our earlier findings.|10
-reluctant|不情愿的|She was ___ to leave her hometown.|10
-subtle|微妙的，细微的|There is a ___ difference in meaning.|10
-`;
+(function () {
+  'use strict';
 
-/* ==========================================================
-   基础数据
-   ========================================================== */
-const WORDS = RAW_WORDS.trim().split('\n').map(line => {
-  const p = line.split('|');
-  return { w: p[0].trim(), zh: p[1].trim(), en: p[2].trim(), lv: parseInt(p[3], 10) };
-});
-const WORD_MAP = {};
-WORDS.forEach(x => { WORD_MAP[x.w] = x; });
-
-// 艾宾浩斯记忆间隔（天）：阶段 0 为“学习中”，阶段 1~9 逐步拉长
-const INTERVALS = [0, 1, 2, 4, 7, 15, 30, 60, 120, 240];
-const MAX_STAGE = INTERVALS.length - 1;
-
-const STORE_KEY = 'ielts_words_v1';
-const DEFAULT_STATE = {
-  settings: { level: 1, newPerDay: 10, reviewLimit: 30 },
-  words: {},          // 单词 -> { st, due, intro, seen, wrong }
-  streak: { count: 0, last: null },
-  days: {},           // 'YYYY-MM-DD' -> { done, count }
-  totalAnswers: 0,
-  totalCorrect: 0
-};
-
-/* ==========================================================
-   工具函数
-   ========================================================== */
-function todayStr(d) {
-  d = d || new Date();
-  const z = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
-  return z.toISOString().slice(0, 10);
-}
-function addDays(dateStr, n) {
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setDate(d.getDate() + n);
-  return todayStr(d);
-}
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORE_KEY);
-    if (raw) {
-      const s = JSON.parse(raw);
-      return Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), s);
+  /* ============ 全局错误提示（方便排查） ============ */
+  window.onerror = function (msg, src, line) {
+    var box = document.getElementById('errBox');
+    if (box) {
+      box.style.display = 'block';
+      box.textContent = '脚本出错：' + msg + '（第 ' + line + ' 行）';
     }
-  } catch (e) { /* ignore */ }
-  return JSON.parse(JSON.stringify(DEFAULT_STATE));
-}
-function saveState() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
-}
-function toast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.remove('show'), 1800);
-}
+  };
 
-/* ==========================================================
-   全局状态
-   ========================================================== */
-let state = loadState();
-let session = null;      // { queue: [{w, mode}], done: number }
-let phase = 'answer';    // 'answer' | 'feedback'
+  /* ==========================================================
+     词库：每行 "单词|中文|例句(用___挖空)|难度1-10"
+     ========================================================== */
+  var RAW = [
+    "abandon|放弃，抛弃|They had to ___ the car in the snow.|1",
+    "absorb|吸收；使全神贯注|Plants ___ water through their roots.|1",
+    "abstract|抽象的；摘要|Beauty is an ___ concept.|1",
+    "academic|学术的；学业的|She has a strong ___ background.|1",
+    "accurate|准确的，精确的|The report must be ___ and fair.|1",
+    "achieve|实现，达到|You can ___ your goals with hard work.|1",
+    "adapt|适应；改编|Children ___ quickly to new environments.|1",
+    "admire|钦佩，赞赏|I ___ her courage and honesty.|1",
+    "advantage|优势，好处|Being bilingual is a real ___.|1",
+    "affect|影响；感动|Climate change will ___ us all.|1",
+    "agriculture|农业|___ is vital to the local economy.|1",
+    "ancient|古代的，古老的|We visited an ___ temple in Rome.|1",
 
-/* ==========================================================
-   DOM 引用
-   ========================================================== */
-const $ = id => document.getElementById(id);
-const answerEl   = $('answer');
-const fbEl       = $('fb');
-const hintEl     = $('hint');
-const zhEl       = $('zh');
-const enEl       = $('en');
-const pillMode   = $('pillMode');
-const pillLv     = $('pillLv');
-const btnSubmit  = $('btnSubmit');
-const btnNext    = $('btnNext');
-const btnHint    = $('btnHint');
-const cardArea   = $('cardArea');
-const finishArea = $('finishArea');
-const barFill    = $('barFill');
-const barLeft    = $('barLeft');
-const barRight   = $('barRight');
-const streakEl   = $('streakEl');
+    "anticipate|预期，预料|We ___ a rise in prices next year.|2",
+    "anxious|焦虑的，担忧的|She felt ___ before the interview.|2",
+    "apparent|明显的；表面上的|It was ___ that he was lying.|2",
+    "appreciate|欣赏；感激；理解|I really ___ your help.|2",
+    "approach|方法；接近|We need a new ___ to this problem.|2",
+    "appropriate|适当的，恰当的|Wear ___ clothes for the interview.|2",
+    "approve|批准；赞成|The board will ___ the budget tomorrow.|2",
+    "argue|争论；主张|They often ___ about money.|2",
+    "arrange|安排；整理|Can you ___ a meeting for Friday?|2",
+    "assess|评估，评价|Teachers ___ students progress each term.|2",
+    "assist|帮助，协助|Volunteers ___ the elderly with shopping.|2",
+    "assume|假定；承担|Do not ___ that everyone agrees with you.|2",
 
-/* ==========================================================
-   视图切换
-   ========================================================== */
-function showView(name) {
-  document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
-  $('view-' + name).classList.remove('hidden');
-  document.querySelectorAll('.tab').forEach(t =>
-    t.classList.toggle('active', t.dataset.view === name));
-  if (name === 'stats') renderStats();
-  if (name === 'settings') renderSettings();
-  window.scrollTo(0, 0);
-}
-document.querySelectorAll('.tab').forEach(t => {
-  t.addEventListener('click', () => showView(t.dataset.view));
-});
+    "attitude|态度，看法|A positive ___ helps you succeed.|3",
+    "authority|权威；当局|The local ___ closed the road.|3",
+    "aware|意识到的，知道的|Are you ___ of the risks?|3",
+    "benefit|利益；受益|Regular exercise will ___ your health.|3",
+    "bias|偏见，偏向|The report showed a clear ___ against women.|3",
+    "brief|简短的；简要介绍|He gave a ___ summary of the plan.|3",
+    "burden|负担，重担|Caring for a sick relative is a heavy ___.|3",
+    "campaign|运动，活动|They launched a ___ to save the forest.|3",
+    "capable|有能力的，能干的|She is ___ of handling the project alone.|3",
+    "category|类别，种类|Which ___ does this book belong to?|3",
+    "circumstance|情况，环境|Under no ___ should you give up.|3",
+    "commit|承诺；犯（罪）|She decided to ___ herself to the cause.|3",
 
-/* ==========================================================
-   顶部连续打卡
-   ========================================================== */
-function renderStreak() {
-  const s = state.streak;
-  const alive = s.last && (s.last === todayStr() || s.last === addDays(todayStr(), -1));
-  streakEl.textContent = '🔥 ' + (alive ? s.count : 0) + ' 天';
-}
+    "compensate|补偿，赔偿|The company agreed to ___ the workers.|4",
+    "competent|有能力的，胜任的|He is a ___ and reliable employee.|4",
+    "complex|复杂的；综合体|The human brain is extremely ___.|4",
+    "comprehensive|全面的，综合的|We need a ___ review of the policy.|4",
+    "concentrate|集中；专心|It is hard to ___ in a noisy room.|4",
+    "conclusion|结论；结束|We reached the same ___ independently.|4",
+    "conduct|进行；行为|They will ___ a survey next month.|4",
+    "confident|自信的，有把握的|She feels ___ about the exam.|4",
+    "consequence|后果，结果|Every decision has a ___.|4",
+    "considerable|相当大的，可观的|The project required ___ investment.|4",
+    "constant|不断的，持续的|The machine requires ___ maintenance.|4",
+    "constitute|构成，组成|Women ___ half of the workforce.|4",
 
-/* ==========================================================
-   构建学习会话
-   ========================================================== */
-function startSession(extra) {
-  const t = todayStr();
-  const st = state.settings;
+    "contribute|贡献；促成|Everyone should ___ to the discussion.|5",
+    "controversial|有争议的|The new law is highly ___.|5",
+    "convention|惯例；大会|It is a social ___ to shake hands.|5",
+    "convince|说服，使信服|He tried to ___ me to stay.|5",
+    "crucial|至关重要的|Timing is ___ to the success of the plan.|5",
+    "cultivate|培养；耕作|Farmers ___ rice in these fields.|5",
+    "currency|货币|The local ___ has lost value.|5",
+    "decline|下降；拒绝|Sales began to ___ last year.|5",
+    "dedicate|奉献，致力于|She chose to ___ her life to research.|5",
+    "deficit|赤字，亏损|The country faces a huge trade ___.|5",
+    "deliberate|故意的；深思熟虑的|It was a ___ attempt to mislead us.|5",
+    "demonstrate|证明；示范；游行|The results ___ a clear link between the two.|5",
 
-  /* --- 到期复习词 --- */
-  const reviews = [];
-  for (const w in state.words) {
-    const rec = state.words[w];
-    if (rec.due && rec.due <= t) reviews.push(w);
-  }
-  reviews.sort((a, b) =>
-    (state.words[a].due || '').localeCompare(state.words[b].due || ''));
-  const reviewList = reviews.slice(0, st.reviewLimit);
+    "derive|源自；获得|Many English words ___ from Latin.|6",
+    "diminish|减少，削弱|His influence began to ___ over time.|6",
+    "discriminate|歧视；区分|It is illegal to ___ against older workers.|6",
+    "dismiss|解雇；驳回|The manager decided to ___ the complaint.|6",
+    "dispute|争论，纠纷|The two sides are in a long ___ over land.|6",
+    "distinct|明显的；不同的|There is a ___ difference between the two.|6",
+    "diverse|多样的，不同的|The city has a ___ population.|6",
+    "dominate|支配，主导|A few firms ___ the market.|6",
+    "durable|耐用的|These boots are cheap but ___.|6",
+    "elaborate|详尽的；详细阐述|Could you ___ on that point?|6",
+    "eliminate|消除，淘汰|The new system will ___ most errors.|6",
+    "emerge|出现，浮现|New problems ___ every week.|6",
 
-  /* --- 新词配额 --- */
-  let quota;
-  if (extra) {
-    quota = st.newPerDay;
-  } else {
-    let introToday = 0;
-    for (const w in state.words) {
-      if (state.words[w].intro === t) introToday++;
-    }
-    quota = Math.max(0, st.newPerDay - introToday);
-  }
+    "emphasize|强调|I must ___ the importance of safety.|7",
+    "endure|忍受；持续|They had to ___ years of hardship.|7",
+    "enhance|提高，增强|Good lighting can ___ the mood.|7",
+    "enormous|巨大的|The project required an ___ amount of money.|7",
+    "equivalent|等同的；等价物|One mile is ___ to about 1.6 kilometres.|7",
+    "essential|必要的，本质的|Water is ___ for life.|7",
+    "establish|建立，确立|They hope to ___ a new charity.|7",
+    "estimate|估计，估算|Experts ___ the damage at two million dollars.|7",
+    "evaluate|评估，评价|We must ___ the results carefully.|7",
+    "evident|明显的，显然的|It is ___ that the plan failed.|7",
+    "evolve|进化，演变|Languages ___ slowly over time.|7",
+    "exceed|超过，超越|Costs must not ___ the budget.|7",
 
-  const pool = WORDS.filter(x => x.lv === st.level && !state.words[x.w]);
-  const newList = pool.slice(0, quota).map(x => x.w);
+    "exclude|排除，不包括|We cannot ___ the possibility of rain.|8",
+    "exploit|利用；剥削|Some companies ___ cheap labour abroad.|8",
+    "facilitate|促进，使便利|The new road will ___ trade.|8",
+    "fluctuate|波动，起伏|Prices ___ with the seasons.|8",
+    "framework|框架，结构|The report sets out a legal ___.|8",
+    "fundamental|基本的，根本的|Trust is ___ to any relationship.|8",
+    "generate|产生，生成|Wind farms ___ clean electricity.|8",
+    "genuine|真正的，真诚的|She showed ___ concern for others.|8",
+    "hypothesis|假设，假说|The data supports his ___.|8",
+    "identical|完全相同的|The two copies are ___.|8",
+    "illustrate|说明，举例说明|These figures ___ the scale of the problem.|8",
+    "imply|暗示，意味着|His silence seemed to ___ agreement.|8",
 
-  // 立即建档，避免重复计入今日新词
-  newList.forEach(w => {
-    state.words[w] = { st: 0, due: t, intro: t, seen: 0, wrong: 0 };
-  });
+    "impose|强加；征收|The government may ___ new taxes.|9",
+    "incentive|激励，动机|Bonuses act as an ___ to work harder.|9",
+    "inevitable|不可避免的|Change is ___ in any organisation.|9",
+    "infrastructure|基础设施|The country needs better ___.|9",
+    "inherent|固有的，内在的|There are ___ risks in this approach.|9",
+    "initiate|开始，发起|They plan to ___ a new research project.|9",
+    "innovate|创新|Firms must ___ to stay competitive.|9",
+    "integrate|整合，融入|Schools help immigrants ___ into society.|9",
+    "intervene|干预，介入|The government chose not to ___.|9",
+    "justify|证明…正当|Nothing can ___ such cruelty.|9",
+    "legitimate|合法的，合理的|That is a ___ concern.|9",
+    "manipulate|操纵，控制|They tried to ___ public opinion.|9",
 
-  const queue = [
-    ...reviewList.map(w => ({ w: w, mode: 'review' })),
-    ...newList.map(w => ({ w: w, mode: 'new' }))
+    "mitigate|减轻，缓和|Measures to ___ climate change are urgent.|10",
+    "notorious|臭名昭著的|The area is ___ for its crime.|10",
+    "obsolete|过时的，淘汰的|These machines are now ___.|10",
+    "paradox|悖论，矛盾|It is a ___ that the poor often pay more.|10",
+    "perceive|察觉，认为|People ___ risk in different ways.|10",
+    "persist|坚持；持续|If symptoms ___, see a doctor.|10",
+    "plausible|似乎合理的|That sounds like a ___ explanation.|10",
+    "prevail|盛行；获胜|Common sense will ___ in the end.|10",
+    "profound|深刻的，深远的|The war had a ___ effect on society.|10",
+    "reinforce|加强，强化|The results ___ our earlier findings.|10",
+    "reluctant|不情愿的|She was ___ to leave her hometown.|10",
+    "subtle|微妙的，细微的|There is a ___ difference in meaning.|10"
   ];
 
-  saveState();
+  var WORDS = RAW.map(function (s) {
+    var p = s.split('|');
+    return {
+      w: (p[0] || '').trim(),
+      zh: (p[1] || '').trim(),
+      en: (p[2] || '').trim(),
+      lv: parseInt(p[3], 10) || 1
+    };
+  });
 
-  if (queue.length === 0) {
-    session = null;
-    showFinish({
-      emoji: '☕️',
-      title: '暂时没有需要学习的单词',
-      desc: `当前难度 Lv.${st.level} 的词库已学完，且没有到期复习。<br>可以到「设置」里切换更高的难度等级。`
+  var WORD_MAP = {};
+  for (var i = 0; i < WORDS.length; i++) { WORD_MAP[WORDS[i].w] = WORDS[i]; }
+
+  /* ==========================================================
+     常量与状态
+     ========================================================== */
+  var INTERVALS = [0, 1, 2, 4, 7, 15, 30, 60, 120, 240];
+  var MAX_STAGE = INTERVALS.length - 1;
+  var STORE_KEY = 'ielts_words_v1';
+
+  var DEFAULT_STATE = {
+    settings: { level: 1, newPerDay: 10, reviewLimit: 30 },
+    words: {},
+    streak: { count: 0, last: null },
+    days: {},
+    totalAnswers: 0,
+    totalCorrect: 0
+  };
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (raw) {
+        var obj = JSON.parse(raw);
+        return {
+          settings: Object.assign({}, DEFAULT_STATE.settings, obj.settings || {}),
+          words: obj.words || {},
+          streak: Object.assign({}, DEFAULT_STATE.streak, obj.streak || {}),
+          days: obj.days || {},
+          totalAnswers: obj.totalAnswers || 0,
+          totalCorrect: obj.totalCorrect || 0
+        };
+      }
+    } catch (e) {}
+    return JSON.parse(JSON.stringify(DEFAULT_STATE));
+  }
+
+  function saveState() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  var state = loadState();
+
+  /* ==========================================================
+     工具
+     ========================================================== */
+  function $(id) { return document.getElementById(id); }
+
+  function todayStr(d) {
+    var x = d ? new Date(d.getTime()) : new Date();
+    var z = new Date(x.getTime() - x.getTimezoneOffset() * 60000);
+    return z.toISOString().slice(0, 10);
+  }
+
+  function addDays(dateStr, n) {
+    var d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return todayStr(d);
+  }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var el = $('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 1800);
+  }
+
+  /* ==========================================================
+     DOM
+     ========================================================== */
+  var answerEl = $('answer');
+  var fbEl = $('fb');
+  var hintEl = $('hint');
+  var zhEl = $('zh');
+  var enEl = $('en');
+  var pillMode = $('pillMode');
+  var pillLv = $('pillLv');
+  var btnSubmit = $('btnSubmit');
+  var btnNext = $('btnNext');
+  var btnHint = $('btnHint');
+  var cardArea = $('cardArea');
+  var finishArea = $('finishArea');
+  var barFill = $('barFill');
+  var barLeft = $('barLeft');
+  var barRight = $('barRight');
+  var streakEl = $('streakEl');
+
+  /* ==========================================================
+     视图切换
+     ========================================================== */
+  function showView(name) {
+    var views = document.querySelectorAll('.view');
+    for (var i = 0; i < views.length; i++) views[i].classList.add('hidden');
+    var target = $('view-' + name);
+    if (target) target.classList.remove('hidden');
+
+    var tabs = document.querySelectorAll('.tab');
+    for (var j = 0; j < tabs.length; j++) {
+      tabs[j].classList.toggle('active', tabs[j].getAttribute('data-view') === name);
+    }
+    if (name === 'stats') renderStats();
+    if (name === 'settings') renderSettings();
+    window.scrollTo(0, 0);
+  }
+
+  var tabEls = document.querySelectorAll('.tab');
+  for (var ti = 0; ti < tabEls.length; ti++) {
+    (function (btn) {
+      btn.addEventListener('click', function () {
+        showView(btn.getAttribute('data-view'));
+      });
+    })(tabEls[ti]);
+  }
+
+  /* ==========================================================
+     打卡显示
+     ========================================================== */
+  function renderStreak() {
+    var s = state.streak;
+    var t = todayStr();
+    var alive = s.last && (s.last === t || s.last === addDays(t, -1));
+    streakEl.textContent = '🔥 ' + (alive ? s.count : 0) + ' 天';
+  }
+
+  /* ==========================================================
+     学习会话
+     ========================================================== */
+  var session = null;
+  var phase = 'answer';
+
+  function startSession(extra) {
+    var t = todayStr();
+    var st = state.settings;
+
+    /* --- 到期复习 --- */
+    var reviews = [];
+    for (var w in state.words) {
+      if (!Object.prototype.hasOwnProperty.call(state.words, w)) continue;
+      var rec = state.words[w];
+      if (rec && rec.due && rec.due <= t) reviews.push(w);
+    }
+    reviews.sort(function (a, b) {
+      return (state.words[a].due || '').localeCompare(state.words[b].due || '');
     });
-    return;
-  }
+    var reviewList = reviews.slice(0, st.reviewLimit);
 
-  session = { queue: queue, done: 0 };
-  cardArea.classList.remove('hidden');
-  finishArea.classList.add('hidden');
-  renderCard();
-}
+    /* --- 新词配额 --- */
+    var quota;
+    if (extra) {
+      quota = st.newPerDay;
+    } else {
+      var introToday = 0;
+      for (var w2 in state.words) {
+        if (state.words[w2] && state.words[w2].intro === t) introToday++;
+      }
+      quota = Math.max(0, st.newPerDay - introToday);
+    }
 
-/* ==========================================================
-   渲染当前卡片
-   ========================================================== */
-function renderCard() {
-  if (!session || session.queue.length === 0) return;
+    var pool = WORDS.filter(function (x) {
+      return x.lv === st.level && !state.words[x.w];
+    });
+    var newList = pool.slice(0, quota).map(function (x) { return x.w; });
 
-  const item = session.queue[0];
-  const data = WORD_MAP[item.w];
+    newList.forEach(function (w) {
+      state.words[w] = { st: 0, due: t, intro: t, seen: 0, wrong: 0 };
+    });
 
-  pillMode.textContent = item.mode === 'new' ? '新词' : '复习';
-  pillLv.textContent = '难度 Lv.' + data.lv;
+    var queue = [];
+    reviewList.forEach(function (w) { queue.push({ w: w, mode: 'review' }); });
+    newList.forEach(function (w) { queue.push({ w: w, mode: 'new' }); });
 
-  zhEl.textContent = data.zh;
-  enEl.innerHTML = data.en.replace(/_{2,}/g,
-    '<span class="blank">______</span>');
+    saveState();
 
-  hintEl.textContent = '';
-  fbEl.textContent = '';
-  fbEl.className = 'fb';
+    if (queue.length === 0) {
+      session = null;
+      showFinish({
+        emoji: '☕️',
+        title: '暂时没有需要学习的单词',
+        desc: '当前难度 Lv.' + st.level + ' 的词库已学完，且没有到期复习。<br>可以到「设置」里切换更高的难度等级。'
+      });
+      return;
+    }
 
-  answerEl.value = '';
-  answerEl.disabled = false;
-
-  btnSubmit.classList.remove('hidden');
-  btnNext.classList.add('hidden');
-  btnHint.classList.remove('hidden');
-
-  phase = 'answer';
-  setTimeout(() => { try { answerEl.focus(); } catch (e) {} }, 60);
-
-  updateBar();
-}
-
-function updateBar() {
-  if (!session) {
-    barLeft.textContent = '今日已完成';
-    barRight.textContent = '';
-    barFill.style.width = '100%';
-    return;
-  }
-  const total = session.done + session.queue.length;
-  const pct = total ? (session.done / total) * 100 : 0;
-  barFill.style.width = pct + '%';
-  barLeft.textContent = `进度 ${session.done} / ${total}`;
-  barRight.textContent = session.queue.length ? `剩余 ${session.queue.length}` : '完成';
-}
-
-/* ==========================================================
-   提示
-   ========================================================== */
-btnHint.addEventListener('click', () => {
-  if (phase !== 'answer' || !session) return;
-  const w = session.queue[0].w;
-  const masked = w[0] + ' ' + '_ '.repeat(w.length - 1).trim();
-  hintEl.textContent = `提示：${masked}（共 ${w.length} 个字母）`;
-});
-
-/* ==========================================================
-   提交答案
-   ========================================================== */
-function submitAnswer() {
-  if (phase !== 'answer' || !session || session.queue.length === 0) return;
-
-  const val = answerEl.value.trim();
-  if (!val) { answerEl.focus(); return; }
-
-  const item = session.queue[0];
-  const rec = state.words[item.w];
-  const t = todayStr();
-
-  rec.seen = (rec.seen || 0) + 1;
-  state.totalAnswers++;
-
-  const ok = val.toLowerCase() === item.w.toLowerCase();
-
-  if (ok) {
-    state.totalCorrect++;
-    rec.st = Math.min((rec.st || 0) + 1, MAX_STAGE);
-    rec.due = addDays(t, INTERVALS[rec.st]);
-    session.done++;
-    session.queue.shift();
-  } else {
-    rec.wrong = (rec.wrong || 0) + 1;
-    rec.st = 0;
-    rec.due = t;
-    session.queue.shift();
-    session.queue.push(item);   // 稍后重新出现
-  }
-
-  saveState();
-
-  /* --- 展示反馈 --- */
-  phase = 'feedback';
-  answerEl.disabled = true;
-  btnHint.classList.add('hidden');
-  btnSubmit.classList.add('hidden');
-  btnNext.classList.remove('hidden');
-  btnNext.focus();
-
-  fbEl.className = 'fb ' + (ok ? 'ok' : 'bad');
-  fbEl.textContent = ok
-    ? '✓ 答对了！' + (item.mode === 'new' ? ' 新词已加入记忆计划。' : '')
-    : '✗ 正确答案：' + item.w;
-
-  updateBar();
-}
-
-btnSubmit.addEventListener('click', submitAnswer);
-btnNext.addEventListener('click', nextCard);
-
-function nextCard() {
-  if (phase !== 'feedback' || !session) return;
-  if (session.queue.length === 0) {
-    finishSession();
-  } else {
+    session = { queue: queue, done: 0 };
+    cardArea.classList.remove('hidden');
+    finishArea.classList.add('hidden');
     renderCard();
   }
-}
 
-/* 键盘：回车提交 / 回车继续 */
-document.addEventListener('keydown', e => {
-  if (e.key !== 'Enter') return;
-  if (phase === 'answer' && document.activeElement === answerEl) {
-    e.preventDefault();
-    submitAnswer();
-  } else if (phase === 'feedback') {
-    e.preventDefault();
-    nextCard();
+  function updateBar() {
+    if (!session) {
+      barLeft.textContent = '今日已完成';
+      barRight.textContent = '';
+      barFill.style.width = '100%';
+      return;
+    }
+    var total = session.done + session.queue.length;
+    var pct = total ? (session.done / total) * 100 : 0;
+    barFill.style.width = pct + '%';
+    barLeft.textContent = '进度 ' + session.done + ' / ' + total;
+    barRight.textContent = session.queue.length ? ('剩余 ' + session.queue.length) : '完成';
   }
-});
 
-/* ==========================================================
-   会话结束
-   ========================================================== */
-function updateStreak() {
-  const t = todayStr();
-  const s = state.streak;
-  if (s.last === t) return;
-  if (s.last && addDays(s.last, 1) === t) s.count += 1;
-  else s.count = 1;
-  s.last = t;
-}
+  function renderCard() {
+    if (!session || session.queue.length === 0) return;
 
-function finishSession() {
-  const t = todayStr();
-  const learned = session ? session.done : 0;
+    var item = session.queue[0];
+    var data = WORD_MAP[item.w];
+    if (!data) { session.queue.shift(); return renderCard(); }
 
-  if (learned > 0) {
-    state.days[t] = state.days[t] || { done: false, count: 0 };
-    state.days[t].done = true;
-    state.days[t].count = (state.days[t].count || 0) + learned;
-    updateStreak();
+    pillMode.textContent = item.mode === 'new' ? '新词' : '复习';
+    pillLv.textContent = '难度 Lv.' + data.lv;
+
+    zhEl.textContent = data.zh;
+    enEl.innerHTML = data.en.replace(/_{2,}/g, '<span class="blank">______</span>');
+
+    hintEl.textContent = '';
+    fbEl.textContent = '';
+    fbEl.className = 'fb';
+
+    answerEl.value = '';
+    answerEl.disabled = false;
+
+    btnSubmit.classList.remove('hidden');
+    btnNext.classList.add('hidden');
+    btnHint.classList.remove('hidden');
+
+    phase = 'answer';
+    setTimeout(function () { try { answerEl.focus(); } catch (e) {} }, 60);
+    updateBar();
+  }
+
+  /* --- 提示 --- */
+  btnHint.addEventListener('click', function () {
+    if (phase !== 'answer' || !session || !session.queue.length) return;
+    var w = session.queue[0].w;
+    var masked = w.charAt(0);
+    for (var i = 1; i < w.length; i++) masked += ' _';
+    hintEl.textContent = '提示：' + masked + '（共 ' + w.length + ' 个字母）';
+  });
+
+  /* --- 提交 --- */
+  function submitAnswer() {
+    if (phase !== 'answer' || !session || !session.queue.length) return;
+
+    var val = answerEl.value.trim();
+    if (!val) { answerEl.focus(); return; }
+
+    var item = session.queue[0];
+    var rec = state.words[item.w];
+    var t = todayStr();
+    if (!rec) { rec = state.words[item.w] = { st: 0, due: t, intro: t, seen: 0, wrong: 0 }; }
+
+    rec.seen = (rec.seen || 0) + 1;
+    state.totalAnswers++;
+
+    var ok = val.toLowerCase() === item.w.toLowerCase();
+
+    if (ok) {
+      state.totalCorrect++;
+      rec.st = Math.min((rec.st || 0) + 1, MAX_STAGE);
+      rec.due = addDays(t, INTERVALS[rec.st]);
+      session.done++;
+      session.queue.shift();
+    } else {
+      rec.wrong = (rec.wrong || 0) + 1;
+      rec.st = 0;
+      rec.due = t;
+      session.queue.shift();
+      session.queue.push(item);
+    }
+
     saveState();
+
+    phase = 'feedback';
+    answerEl.disabled = true;
+    btnHint.classList.add('hidden');
+    btnSubmit.classList.add('hidden');
+    btnNext.classList.remove('hidden');
+    try { btnNext.focus(); } catch (e) {}
+
+    fbEl.className = 'fb ' + (ok ? 'ok' : 'bad');
+    fbEl.textContent = ok
+      ? ('✓ 答对了！' + (item.mode === 'new' ? ' 新词已加入记忆计划。' : ''))
+      : ('✗ 正确答案：' + item.w);
+
+    updateBar();
   }
 
-  session = null;
-  renderStreak();
-  updateBar();
+  btnSubmit.addEventListener('click', submitAnswer);
 
-  showFinish({
-    emoji: '🎉',
-    title: '今日任务完成',
-    desc: `本次完成 ${learned} 个单词<br>连续打卡 ${state.streak.count} 天`
-  });
-}
-
-function showFinish(opt) {
-  cardArea.classList.add('hidden');
-  finishArea.classList.remove('hidden');
-  $('finishEmoji').textContent = opt.emoji;
-  $('finishTitle').textContent = opt.title;
-  $('finishDesc').innerHTML = opt.desc;
-  updateBar();
-}
-
-$('btnExtra').addEventListener('click', () => startSession(true));
-$('btnStats').addEventListener('click', () => showView('stats'));
-
-/* ==========================================================
-   统计视图
-   ========================================================== */
-function renderStats() {
-  const t = todayStr();
-  const learned = Object.keys(state.words).length;
-  const acc = state.totalAnswers
-    ? Math.round(state.totalCorrect / state.totalAnswers * 100) : 0;
-
-  /* 记忆阶段分布 */
-  const dist = new Array(INTERVALS.length).fill(0);
-  let mastered = 0;
-  for (const w in state.words) {
-    const s = Math.min(state.words[w].st || 0, MAX_STAGE);
-    dist[s]++;
-    if (s >= 5) mastered++;
-  }
-  const maxDist = Math.max(1, ...dist);
-
-  let distHtml = '';
-  for (let i = 0; i < INTERVALS.length; i++) {
-    const label = i === 0 ? '学习中' : '阶段 ' + i;
-    distHtml += `
-      <div class="distrow">
-        <span class="lb">${label}</span>
-        <span class="track"><i style="width:${(dist[i] / maxDist) * 100}%"></i></span>
-        <span class="nm">${dist[i]}</span>
-      </div>`;
+  function nextCard() {
+    if (phase !== 'feedback' || !session) return;
+    if (session.queue.length === 0) finishSession();
+    else renderCard();
   }
 
-  /* 最近 7 天 */
-  let weekHtml = '';
-  for (let i = 6; i >= 0; i--) {
-    const d = addDays(t, -i);
-    const rec = state.days[d];
-    const on = rec && rec.done;
-    const [, mm, dd] = d.split('-');
-    weekHtml += `<div class="day ${on ? 'on' : ''}">
-        <span>${mm}/${dd}</span><i>${on ? '✓' : '·'}</i></div>`;
-  }
+  btnNext.addEventListener('click', nextCard);
 
-  /* 各难度进度 */
-  const lvStat = {};
-  for (let i = 1; i <= 10; i++) lvStat[i] = { total: 0, learned: 0 };
-  WORDS.forEach(x => {
-    lvStat[x.lv].total++;
-    if (state.words[x.w]) lvStat[x.lv].learned++;
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    if (phase === 'answer' && document.activeElement === answerEl) {
+      e.preventDefault();
+      submitAnswer();
+    } else if (phase === 'feedback') {
+      e.preventDefault();
+      nextCard();
+    }
   });
 
-  let lvHtml = '';
-  for (let i = 1; i <= 10; i++) {
-    const { total, learned: l } = lvStat[i];
-    const pct = total ? Math.round(l / total * 100) : 0;
-    lvHtml += `
-      <div class="distrow">
-        <span class="lb">Lv.${i}</span>
-        <span class="track"><i style="width:${pct}%"></i></span>
-        <span class="nm">${l}/${total}</span>
-      </div>`;
+  /* ==========================================================
+     完成
+     ========================================================== */
+  function updateStreak() {
+    var t = todayStr();
+    var s = state.streak;
+    if (s.last === t) return;
+    if (s.last && addDays(s.last, 1) === t) s.count += 1;
+    else s.count = 1;
+    s.last = t;
   }
 
-  $('view-stats').innerHTML = `
-    <h2 class="page-title">学习统计</h2>
+  function finishSession() {
+    var t = todayStr();
+    var learned = session ? session.done : 0;
 
-    <div class="grid2">
-      <div class="stat"><div class="k">连续打卡</div>
-        <div class="v">${state.streak.count}<small>天</small></div></div>
-      <div class="stat"><div class="k">已学单词</div>
-        <div class="v">${learned}<small>/ ${WORDS.length}</small></div></div>
-      <div class="stat"><div class="k">答题正确率</div>
-        <div class="v">${acc}<small>%</small></div></div>
-      <div class="stat"><div class="k">进入长期记忆</div>
-        <div class="v">${mastered}<small>词</small></div></div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-title">最近 7 天</div>
-      <div class="week">${weekHtml}</div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-title">记忆阶段分布</div>
-      <p class="muted">阶段越高，复习间隔越长（1→2→4→7→15→30→60→120→240 天）。</p>
-      ${distHtml}
-    </div>
-
-    <div class="panel">
-      <div class="panel-title">各难度掌握进度</div>
-      ${lvHtml}
-    </div>
-  `;
-}
-
-/* ==========================================================
-   设置视图
-   ========================================================== */
-function renderSettings() {
-  const s = state.settings;
-
-  let lvBtns = '';
-  for (let i = 1; i <= 10; i++) {
-    lvBtns += `<button class="lvbtn ${s.level === i ? 'on' : ''}" data-lv="${i}">Lv.${i}</button>`;
-  }
-
-  $('view-settings').innerHTML = `
-    <h2 class="page-title">设置</h2>
-
-    <div class="panel">
-      <div class="panel-title">记忆难度等级</div>
-      <p class="muted">新词将从所选等级中抽取，等级越高词汇越难。</p>
-      <div class="levels">${lvBtns}</div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-title">每日新词数量</div>
-      <div class="row">
-        <input type="range" id="newRange" min="5" max="50" step="5" value="${s.newPerDay}">
-        <span class="num" id="newVal">${s.newPerDay}</span>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-title">每日复习上限</div>
-      <div class="row">
-        <input type="range" id="revRange" min="10" max="100" step="10" value="${s.reviewLimit}">
-        <span class="num" id="revVal">${s.reviewLimit}</span>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-title">数据管理</div>
-      <p class="muted">所有进度保存在本机浏览器（localStorage），不会上传。换设备请先导出备份。</p>
-      <div class="btns">
-        <button class="btn ghost" id="btnExport">导出</button>
-        <button class="btn ghost" id="btnImport">导入</button>
-      </div>
-      <div class="btns">
-        <button class="btn danger" id="btnReset">清空全部进度</button>
-      </div>
-      <input type="file" id="fileInput" accept=".json,application/json" class="hidden">
-    </div>
-  `;
-
-  /* 难度选择 */
-  $('view-settings').querySelectorAll('.lvbtn').forEach(b => {
-    b.addEventListener('click', () => {
-      state.settings.level = parseInt(b.dataset.lv, 10);
+    if (learned > 0) {
+      if (!state.days[t]) state.days[t] = { done: false, count: 0 };
+      state.days[t].done = true;
+      state.days[t].count = (state.days[t].count || 0) + learned;
+      updateStreak();
       saveState();
-      $('view-settings').querySelectorAll('.lvbtn').forEach(x =>
-        x.classList.toggle('on', x === b));
-      toast('已切换到 Lv.' + state.settings.level);
-    });
-  });
+    }
 
-  /* 滑块 */
-  const newRange = $('newRange');
-  newRange.addEventListener('input', () => {
-    $('newVal').textContent = newRange.value;
-    state.settings.newPerDay = parseInt(newRange.value, 10);
-    saveState();
-  });
-  const revRange = $('revRange');
-  revRange.addEventListener('input', () => {
-    $('revVal').textContent = revRange.value;
-    state.settings.reviewLimit = parseInt(revRange.value, 10);
-    saveState();
-  });
-
-  /* 导出 */
-  $('btnExport').addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'ielts-words-backup-' + todayStr() + '.json';
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    toast('备份已导出');
-  });
-
-  /* 导入 */
-  const fileInput = $('fileInput');
-  $('btnImport').addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', e => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      try {
-        const obj = JSON.parse(ev.target.result);
-        if (!obj || typeof obj !== 'object' || !obj.words) throw new Error('bad');
-        state = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), obj);
-        saveState();
-        renderStreak();
-        renderSettings();
-        toast('导入成功');
-      } catch (err) {
-        toast('文件格式不正确');
-      }
-    };
-    reader.readAsText(file);
-    fileInput.value = '';
-  });
-
-  /* 重置 */
-  $('btnReset').addEventListener('click', () => {
-    if (!confirm('确定要清空全部学习进度吗？此操作不可撤销。')) return;
-    state = JSON.parse(JSON.stringify(DEFAULT_STATE));
-    saveState();
     session = null;
     renderStreak();
-    renderSettings();
+    updateBar();
+
+    showFinish({
+      emoji: '🎉',
+      title: '今日任务完成',
+      desc: '本次完成 ' + learned + ' 个单词<br>连续打卡 ' + state.streak.count + ' 天'
+    });
+  }
+
+  function showFinish(opt) {
+    cardArea.classList.add('hidden');
+    finishArea.classList.remove('hidden');
+    $('finishEmoji').textContent = opt.emoji;
+    $('finishTitle').textContent = opt.title;
+    $('finishDesc').innerHTML = opt.desc;
+    updateBar();
+  }
+
+  $('btnExtra').addEventListener('click', function () { startSession(true); });
+  $('btnStats').addEventListener('click', function () { showView('stats'); });
+
+  /* ==========================================================
+     统计
+     ========================================================== */
+  function renderStats() {
+    var t = todayStr();
+    var learned = 0;
+    for (var k in state.words) if (state.words[k]) learned++;
+
+    var acc = state.totalAnswers
+      ? Math.round(state.totalCorrect / state.totalAnswers * 100) : 0;
+
+    var dist = new Array(INTERVALS.length).fill(0);
+    var mastered = 0;
+    for (var w in state.words) {
+      if (!state.words[w]) continue;
+      var s = Math.min(state.words[w].st || 0, MAX_STAGE);
+      dist[s]++;
+      if (s >= 5) mastered++;
+    }
+    var maxDist = Math.max.apply(null, dist.concat([1]));
+
+    var distHtml = '';
+    for (var i = 0; i < INTERVALS.length; i++) {
+      var label = i === 0 ? '学习中' : ('阶段 ' + i);
+      distHtml += '<div class="distrow">' +
+        '<span class="lb">' + label + '</span>' +
+        '<span class="track"><i style="width:' + (dist[i] / maxDist * 100) + '%"></i></span>' +
+        '<span class="nm">' + dist[i] + '</span></div>';
+    }
+
+    var weekHtml = '';
+    for (var d = 6; d >= 0; d--) {
+      var ds = addDays(t, -d);
+      var rec = state.days[ds];
+      var on = rec && rec.done;
+      var parts = ds.split('-');
+      weekHtml += '<div class="day ' + (on ? 'on' : '') + '">' +
+        '<span>' + parts[1] + '/' + parts[2] + '</span>' +
+        '<i>' + (on ? '✓' : '·') + '</i></div>';
+    }
+
+    var lvStat = {};
+    for (var L = 1; L <= 10; L++) lvStat[L] = { total: 0, learned: 0 };
+    WORDS.forEach(function (x) {
+      lvStat[x.lv].total++;
+      if (state.words[x.w]) lvStat[x.lv].learned++;
+    });
+
+    var lvHtml = '';
+    for (var L2 = 1; L2 <= 10; L2++) {
+      var o = lvStat[L2];
+      var pct = o.total ? Math.round(o.learned / o.total * 100) : 0;
+      lvHtml += '<div class="distrow">' +
+        '<span class="lb">Lv.' + L2 + '</span>' +
+        '<span class="track"><i style="width:' + pct + '%"></i></span>' +
+        '<span class="nm">' + o.learned + '/' + o.total + '</span></div>';
+    }
+
+    $('view-stats').innerHTML =
+      '<h2 class="page-title">学习统计</h2>' +
+      '<div class="grid2">' +
+        '<div class="stat"><div class="k">连续打卡</div><div class="v">' + state.streak.count + '<small>天</small></div></div>' +
+        '<div class="stat"><div class="k">已学单词</div><div class="v">' + learned + '<small>/ ' + WORDS.length + '</small></div></div>' +
+        '<div class="stat"><div class="k">答题正确率</div><div class="v">' + acc + '<small>%</small></div></div>' +
+        '<div class="stat"><div class="k">进入长期记忆</div><div class="v">' + mastered + '<small>词</small></div></div>' +
+      '</div>' +
+      '<div class="panel"><div class="panel-title">最近 7 天</div><div class="week">' + weekHtml + '</div></div>' +
+      '<div class="panel"><div class="panel-title">记忆阶段分布</div>' +
+        '<p class="muted">阶段越高，复习间隔越长（1→2→4→7→15→30→60→120→240 天）。</p>' +
+        distHtml + '</div>' +
+      '<div class="panel"><div class="panel-title">各难度掌握进度</div>' + lvHtml + '</div>';
+  }
+
+  /* ==========================================================
+     设置
+     ========================================================== */
+  function renderSettings() {
+    var s = state.settings;
+
+    var lvBtns = '';
+    for (var i = 1; i <= 10; i++) {
+      lvBtns += '<button class="lvbtn ' + (s.level === i ? 'on' : '') +
+        '" data-lv="' + i + '" type="button">Lv.' + i + '</button>';
+    }
+
+    $('view-settings').innerHTML =
+      '<h2 class="page-title">设置</h2>' +
+
+      '<div class="panel"><div class="panel-title">记忆难度等级</div>' +
+        '<p class="muted">新词将从所选等级中抽取，等级越高词汇越难。</p>' +
+        '<div class="levels">' + lvBtns + '</div></div>' +
+
+      '<div class="panel"><div class="panel-title">每日新词数量</div>' +
+        '<div class="row"><input type="range" id="newRange" min="5" max="50" step="5" value="' + s.newPerDay + '">' +
+        '<span class="num" id="newVal">' + s.newPerDay + '</span></div></div>' +
+
+      '<div class="panel"><div class="panel-title">每日复习上限</div>' +
+        '<div class="row"><input type="range" id="revRange" min="10" max="100" step="10" value="' + s.reviewLimit + '">' +
+        '<span class="num" id="revVal">' + s.reviewLimit + '</span></div></div>' +
+
+      '<div class="panel"><div class="panel-title">数据管理</div>' +
+        '<p class="muted">所有进度保存在本机浏览器，不会上传。换设备请先导出备份。</p>' +
+        '<div class="btns"><button class="btn ghost" id="btnExport" type="button">导出备份</button>' +
+        '<button class="btn ghost" id="btnImport" type="button">导入备份</button></div>' +
+        '<div class="btns"><button class="btn danger" id="btnReset" type="button">清空全部进度</button></div>' +
+        '<input type="file" id="fileInput" accept=".json,application/json" class="hidden">' +
+      '</div>';
+
+    /* 难度 */
+    var lvEls = $('view-settings').querySelectorAll('.lvbtn');
+    for (var n = 0; n < lvEls.length; n++) {
+      (function (btn) {
+        btn.addEventListener('click', function () {
+          state.settings.level = parseInt(btn.getAttribute('data-lv'), 10);
+          saveState();
+          for (var m = 0; m < lvEls.length; m++) {
+            lvEls[m].classList.toggle('on', lvEls[m] === btn);
+          }
+          toast('已切换到 Lv.' + state.settings.level);
+        });
+      })(lvEls[n]);
+    }
+
+    /* 滑块 */
+    var newRange = $('newRange');
+    newRange.addEventListener('input', function () {
+      $('newVal').textContent = newRange.value;
+      state.settings.newPerDay = parseInt(newRange.value, 10);
+      saveState();
+    });
+
+    var revRange = $('revRange');
+    revRange.addEventListener('input', function () {
+      $('revVal').textContent = revRange.value;
+      state.settings.reviewLimit = parseInt(revRange.value, 10);
+      saveState();
+    });
+
+    /* 导出 */
+    $('btnExport').addEventListener('click', function () {
+      var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'ielts-words-backup-' + todayStr() + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      toast('备份已导出');
+    });
+
+    /* 导入 */
+    var fileInput = $('fileInput');
+    $('btnImport').addEventListener('click', function () { fileInput.click(); });
+    fileInput.addEventListener('change', function (e) {
+      var file = e.target.files && e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        try {
+          var obj = JSON.parse(ev.target.result);
+          if (!obj || typeof obj !== 'object' || !obj.words) throw new Error('bad');
+          state = {
+            settings: Object.assign({}, DEFAULT_STATE.settings, obj.settings || {}),
+            words: obj.words || {},
+            streak: Object.assign({}, DEFAULT_STATE.streak, obj.streak || {}),
+            days: obj.days || {},
+            totalAnswers: obj.totalAnswers || 0,
+            totalCorrect: obj.totalCorrect || 0
+          };
+          saveState();
+          renderStreak();
+          renderSettings();
+          toast('导入成功');
+        } catch (err) {
+          toast('文件格式不正确');
+        }
+      };
+      reader.readAsText(file);
+      fileInput.value = '';
+    });
+
+    /* 重置 */
+    $('btnReset').addEventListener('click', function () {
+      if (!confirm('确定要清空全部学习进度吗？此操作不可撤销。')) return;
+      state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      saveState();
+      session = null;
+      renderStreak();
+      renderSettings();
+      showView('study');
+      startSession(false);
+      toast('进度已清空');
+    });
+  }
+
+  /* ==========================================================
+     启动
+     ========================================================== */
+  function boot() {
+    renderStreak();
     showView('study');
     startSession(false);
-    toast('进度已清空');
-  });
-}
+  }
 
-/* ==========================================================
-   启动
-   ========================================================== */
-function boot() {
-  renderStreak();
-  showView('study');
-  startSession(false);
-}
-boot();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+
+})();
 </script>
 </body>
 </html>
