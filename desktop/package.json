@@ -1,0 +1,53 @@
+{
+  "name": "words-desktop",
+  "version": "1.0.0",
+  "description": "WORDS —— 万词记忆系统桌面版",
+  "main": "main.js",
+  "author": "illudew",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --publish never"
+  },
+  "devDependencies": {
+    "electron": "^32.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.illudew.words",
+    "productName": "WORDS",
+    "files": [
+      "main.js",
+      "index.html"
+    ],
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "WORDS-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.education",
+      "artifactName": "WORDS-${version}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Education",
+      "artifactName": "WORDS-${version}.${ext}"
+    }
+  }
+}
