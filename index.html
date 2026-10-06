@@ -454,12 +454,13 @@ function getDue(){var t=Date.now();return Object.keys(state.words).filter(functi
 function introducedToday(){var t=today(),n=0;Object.keys(state.words).forEach(function(w){var r=state.words[w];if(r.introduced===t&&r.seen>0)n++});return n}
 function todayWords(){var t=today();return Object.keys(state.words).filter(function(w){var r=state.words[w];return MAP[w]&&r.seen>0&&r.introduced===t})}
 function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
-function getNewQuota(extra){return extra?state.settings.dailyNew:Math.max(0,state.settings.dailyNew-introducedToday())}
+/* 每日新词额度：始终按当天剩余量计算；「再来一轮」等任何一轮都不会超发新词 */
+function getNewQuota(){return Math.max(0,state.settings.dailyNew-introducedToday())}
 function pickNew(n){if(n<=0)return [];var pool=WORDS.filter(function(d){var r=state.words[d.w];return (!r||!(r.seen>0))&&allowNew(d)});pool.sort(function(a,b){return priority(a)-priority(b)});return pool.slice(0,n).map(function(d){return d.w})}
-function makeQueue(extra){
+function makeQueue(){
   var q=[];
   getDue().slice(0,state.settings.reviewLimit).forEach(function(w){q.push({w:w,kind:'review'})});
-  pickNew(getNewQuota(extra)).forEach(function(w){q.push({w:w,kind:'new'})});
+  pickNew(getNewQuota()).forEach(function(w){q.push({w:w,kind:'new'})});
   if(!q.length)return q;
   /* 墨墨式随机抽查：把今天背过的词穿插进本轮，不与已排入的词重复 */
   var inq={};q.forEach(function(x){inq[x.w]=1});
@@ -476,11 +477,25 @@ function pushAhead(q,item,gap){
 }
 
 /* ---------- session ---------- */
-function start(extra){
+function beginSession(q,msg){
+  session={queue:q,total:q.length,correct:0,wrong:0,cards:0,lastAutoMode:null,autoBag:null};
+  phase='question';showView('study');renderStudy();renderCard();
+  if(msg)toast(msg);
+}
+function start(){
   if(session){toast('当前学习还没有完成');return}
-  var q=makeQueue(extra);save();
+  var q=makeQueue();save();
   if(!q.length){session=null;renderStudy();renderEmpty();return}
-  session={queue:q,total:q.length,correct:0,wrong:0,cards:0,lastAutoMode:null,autoBag:null};phase='question';showView('study');renderStudy();renderCard();
+  beginSession(q);
+}
+/* 再来一轮：按当天剩余新词额度排队；额度用完后转为抽查今日已学单词，避免空转 */
+function startExtra(){
+  if(session){toast('当前学习还没有完成');return}
+  var q=makeQueue();
+  if(q.length){beginSession(q);return}
+  var ws=shuffle(todayWords()).slice(0,20);
+  if(ws.length){beginSession(ws.map(function(w){return {w:w,kind:'check'}}),'今日新词额度已用完 · 抽查 '+ws.length+' 个今日单词');return}
+  toast('今日新词额度已用完，也没有可复习的单词');
 }
 function currentData(){return session&&session.queue.length?MAP[session.queue[0].w]:null}
 function currentRec(){var d=currentData();return d?userRec(d.w):null}
@@ -513,7 +528,7 @@ function setMode(m){
   if(m===state.settings.mode)return true;
   if(session&&session.queue.length){if(!confirm('切换模式会结束当前这一轮，确定吗？'))return false;session=null;}
   state.settings.mode=m;save();
-  start(false);return true;
+  start();return true;
 }
 function refreshSegLv(){var e=$('segLv');if(e)e.innerHTML='新词难度 <b>'+lvName(state.settings.level)+'</b>（设置中可改 Lv.1–11 与专有名词）'}
 function bindModeSeg(){
@@ -573,15 +588,14 @@ function startCheck(){
   if(session&&session.queue.length){if(!confirm('开始抽查会结束当前这一轮，确定吗？'))return;session=null}
   var ws=shuffle(todayWords()).slice(0,20);
   if(!ws.length){toast('今天还没有背过单词');return}
-  session={queue:ws.map(function(w){return {w:w,kind:'check'}}),total:ws.length,correct:0,wrong:0,cards:0,lastAutoMode:null,autoBag:null};
-  phase='question';showView('study');renderStudy();renderCard();toast('抽查 '+ws.length+' 个今日单词');
+  beginSession(ws.map(function(w){return {w:w,kind:'check'}}),'抽查 '+ws.length+' 个今日单词');
 }
 function renderEmpty(){
   var c=$('study-card');if(!c)return;
   var done=state.days[today()]&&state.days[today()].done;
-  c.innerHTML='<div class="finish"><div class="icon">✓</div><h2>今日计划已清空</h2><p>'+(done?'每日任务已达标，今日签到成功。':'每日任务已达到 80% 才会计入签到。')+'没有到期复习，也没有剩余新词额度。想继续可以「再来一轮」。</p>'+
+  c.innerHTML='<div class="finish"><div class="icon">✓</div><h2>今日计划已清空</h2><p>'+(done?'每日任务已达标，今日签到成功。':'每日任务已达到 80% 才会计入签到。')+'没有到期复习，今日新词额度（'+introducedToday()+' / '+state.settings.dailyNew+'）也已用完。想多学新词可到「设置」调高「每日新词」，或先抽查今日已学单词。</p>'+
    '<div class="actions"><button class="btn ghost" id="extraBtn" type="button">再来一轮</button><button class="btn primary" id="statsBtn" type="button">查看统计</button></div></div>';
-  $('extraBtn').onclick=function(){start(true)};$('statsBtn').onclick=function(){showView('stats')};
+  $('extraBtn').onclick=startExtra;$('statsBtn').onclick=function(){showView('stats')};
 }
 
 /* ---------- card ---------- */
@@ -932,7 +946,7 @@ function finish(){
    '<div class="settle-stats"><div><b>'+cards+'</b><span>作答卡片</span></div><div><b>'+cor+'</b><span>答对</span></div><div><b>'+acc+'%</b><span>正确率</span></div></div>'+
    '<div class="settle-note">'+(signed?'今日任务已达标，签到成功。':'每日任务达到 80% 才算签到，可以再来一轮继续。')+'</div>'+
    '<div class="actions"><button class="btn ghost" id="extraBtn" type="button">再来一轮</button><button class="btn primary" id="statsBtn" type="button">查看统计</button></div></div>';
-  $('extraBtn').onclick=function(){start(true)};$('statsBtn').onclick=function(){showView('stats')};
+  $('extraBtn').onclick=startExtra;$('statsBtn').onclick=function(){showView('stats')};
 }
 
 /* ---------- views ---------- */
@@ -1076,7 +1090,7 @@ function renderSettings(){
   document.querySelectorAll('#view-settings [data-level]').forEach(function(b){b.onclick=function(){
     var L=+b.dataset.level;if(L===state.settings.level)return;
     if(session&&session.queue.length){if(!confirm('切换难度会结束当前这一轮，重新按 '+lvName(L)+' 抽词，确定吗？'))return;session=null;}
-    state.settings.level=L;save();renderSettings();refreshSegLv();start(false);showView('study');toast('新词难度：'+lvName(L));
+    state.settings.level=L;save();renderSettings();refreshSegLv();start();showView('study');toast('新词难度：'+lvName(L));
   }});
   document.querySelectorAll('#view-settings [data-mode]').forEach(function(b){b.onclick=function(){if(setMode(b.dataset.mode))showView('study')}});
   document.querySelectorAll('[data-accent]').forEach(function(b){b.onclick=function(){state.settings.accent=b.dataset.accent;save();renderSettings();toast('默认发音：'+(b.dataset.accent==='us'?'美音':'英音'))}});
@@ -1265,7 +1279,7 @@ document.addEventListener('keydown',function(e){
 });
 
 /* ---------- boot ---------- */
-function renderAll(){renderStreak();showView('study');if(!session)start(false)}
+function renderAll(){renderStreak();showView('study');if(!session)start()}
 document.querySelectorAll('.tab').forEach(function(b){b.onclick=function(){showView(b.dataset.view)}});
 function boot(){
   try{
@@ -1273,7 +1287,7 @@ function boot(){
     MAP={};WORDS.forEach(function(d){MAP[d.w]=d});
     buildIndex();
     renderStreak();
-    start(false);
+    start();
     toast('词库已就绪 · '+WORDS.length.toLocaleString()+' 词');
     refreshSyncDot();
     restoreCloud();
