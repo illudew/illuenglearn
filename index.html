@@ -26,7 +26,14 @@ button{cursor:pointer}
 .top-meta{display:flex;align-items:center;gap:8px}
 .streak{font-size:12px;color:#a5adbc;background:#11141a;border:1px solid #252a34;padding:7px 12px;border-radius:999px}
 
-.sync-dot{width:8px;height:8px;border-radius:50%;background:#39d98a;box-shadow:0 0 0 4px rgba(57,217,138,.08)}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#39d98a;box-shadow:0 0 0 4px rgba(57,217,138,.08);cursor:pointer}
+.sync-dot.off{background:#4a5262;box-shadow:0 0 0 4px rgba(120,130,150,.08)}
+.sync-dot.busy{background:#4f8cff;box-shadow:0 0 0 4px rgba(79,140,255,.12)}
+.sync-dot.err{background:#ff6b6b;box-shadow:0 0 0 4px rgba(255,107,107,.12)}
+.acct-status{font-size:12.5px;line-height:1.7;color:#9aa4b4;margin-bottom:4px}
+.acct-input{width:100%;background:#141922;border:1px solid #242c38;color:#eef2f7;border-radius:11px;padding:11px 12px;font-size:14px;margin-top:8px}
+.acct-input:focus{outline:none;border-color:#3a68c8}
+.sql{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.6;background:#0d1016;border:1px solid #242a34;border-radius:10px;padding:10px;color:#9fb3d6;white-space:pre-wrap;word-break:break-word;margin-top:8px;max-height:190px;overflow:auto}
 .main{padding:0 15px}
 .view{animation:fade .22s ease}
 @keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
@@ -212,7 +219,11 @@ var STORE='words_v5';
 var MODES=['en2zh','zh2en','spell','listen'];
 /* Potential 模型参数：对数总量制 —— ptt = 5·log10(100×Σ(熟练度×等级)/55000)，下限 0 */
 var PTT={BASE_PEN:0.15,PEN_CAP_ABS:2.0,PEN_TO_PROF:0.10,ERR_W:0.30,FORGET_W:0.20,GPEN_CAP:0.50,SHIELD_CAP:0.5,DECAY:0.95,TARGET:55000};
-var DEFAULT={settings:{dailyNew:300,reviewLimit:300,level:5,mode:'en2zh',accent:'us',speechRate:0.92,autoSpeak:false},words:{},days:{},streak:{count:0,last:null},totalAnswers:0,totalCorrect:0,totalSeconds:0,recent:[],pttHistory:[]};
+/* Supabase 云端账号与跨设备同步配置：填好下面 url 与 anonKey 后，账号功能自动启用（不填则保持纯本地）。
+   获取方式：supabase.com 新建项目 → Project Settings → API，复制 Project URL 与 anon public key。
+   建表 SQL 见设置页「云端账号」面板。 */
+var SB={url:'',anonKey:'',table:'words_progress',cdn:'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js'};
+var DEFAULT={settings:{dailyNew:300,reviewLimit:300,level:5,mode:'en2zh',accent:'us',speechRate:0.92,autoSpeak:false},words:{},days:{},streak:{count:0,last:null},totalAnswers:0,totalCorrect:0,totalSeconds:0,recent:[],pttHistory:[],sync:{auto:true,lastAt:0}};
 
 /* ---------- word bank ---------- */
 var WORDS=(window.WORDS_BANK||[]).map(function(a){return {w:a[0],us:a[1]||'',uk:a[2]||'',zh:a[3]||'',pos:a[4]||'',baseLv:a[5]||5,def:a[6]||'',tags:a[7]||'',ex:a[8]||'',sen:a[9]||''}});
@@ -254,9 +265,10 @@ function normalize(o){
   });
   var rec=Array.isArray(o.recent)?o.recent.slice(-100):[];
   var hist=Array.isArray(o.pttHistory)?o.pttHistory.filter(function(x){return x&&x.d}).slice(-400):[];
-  return {settings:st,words:ws,days:o.days||{},streak:Object.assign({},DEFAULT.streak,o.streak||{}),totalAnswers:+o.totalAnswers||0,totalCorrect:+o.totalCorrect||0,totalSeconds:+o.totalSeconds||0,recent:rec,pttHistory:hist};
+  return {settings:st,words:ws,days:o.days||{},streak:Object.assign({},DEFAULT.streak,o.streak||{}),totalAnswers:+o.totalAnswers||0,totalCorrect:+o.totalCorrect||0,totalSeconds:+o.totalSeconds||0,recent:rec,pttHistory:hist,sync:Object.assign({auto:true,lastAt:0},o.sync||{})};
 }
-function save(){try{localStorage.setItem(STORE,JSON.stringify(state))}catch(e){}}
+function save(){try{localStorage.setItem(STORE,JSON.stringify(state))}catch(e){}scheduleSync()}
+function persistLocal(){try{localStorage.setItem(STORE,JSON.stringify(state))}catch(e){}}
 
 /* ---------- memory model ---------- */
 function userRec(w){var r=state.words[w];if(!r){r={stage:0,dueAt:Date.now(),introduced:null,meaningCorrect:0,productionCorrect:0,meaningWrong:0,productionWrong:0,hints:0,seen:0,correct:0,responseMs:0,streak:0,errStreak:0,penalty:0,last:0};state.words[w]=r}return r}
@@ -916,6 +928,7 @@ function renderSettings(){
    '<div class="toggle"><span>自动朗读当前单词</span><input id="autoSpeak" class="switch" type="checkbox" '+(s.autoSpeak?'checked':'')+'></div>'+
    '<div class="range-row"><span class="tiny">语速</span><input id="rateRange" class="range" type="range" min="0.65" max="1.15" step="0.05" value="'+s.speechRate+'"><div id="rateVal" class="range-val">'+Number(s.speechRate).toFixed(2)+'</div></div>'+
    '<div class="tiny">默认美音。优先播放在线词典的美式 / 英式音频，不可用时回退浏览器语音（en-US / en-GB）。卡片上的「美 / 英」按钮可随时切换试听。</div></div>'+
+   '<div class="panel"><div class="panel-title">云端账号（跨设备同步）</div>'+accountPanelHtml()+'</div>'+
    '<div class="panel"><div class="panel-title">数据管理</div><div class="actions"><button class="btn ghost" id="exportBtn" type="button">导出</button><button class="btn ghost" id="importBtn" type="button">导入</button><button class="btn danger" id="resetBtn" type="button">重置</button></div><input id="fileInput" type="file" accept="application/json,.json" class="hidden">'+
    '<div class="tiny" style="margin-top:8px">快捷键：<span class="kbd">1–4</span> 选项（选择题），<span class="kbd">Enter</span> 提交 / 继续。每轮会自动穿插今天背过的单词做随机抽查，也可点「抽查今日」立即抽查。手机端可 <span class="kbd">左滑</span> 完全忘记、<span class="kbd">右滑</span> 继续。</div></div>'+
    '<div class="panel"><div class="panel-title">桌面版 · 离线安装</div><div class="actions"><button class="btn primary" id="installBtn" type="button">安装到桌面应用</button><a class="btn ghost" href="https://github.com/illudew/illuenglearn/releases" target="_blank" rel="noopener">下载桌面安装包</a></div>'+
@@ -934,6 +947,7 @@ function renderSettings(){
   $('rateRange').oninput=function(e){state.settings.speechRate=+e.target.value;$('rateVal').textContent=Number(e.target.value).toFixed(2);save()};
   $('exportBtn').onclick=exportData;$('importBtn').onclick=function(){$('fileInput').click()};$('fileInput').onchange=importData;$('resetBtn').onclick=resetData;
   var ib=$('installBtn');if(ib)ib.onclick=pwaInstall;
+  bindAccountPanel();
   refreshInstallBtn();
 }
 /* ---------- PWA：安装到桌面 ---------- */
@@ -956,7 +970,144 @@ function pwaInstall(){
 function exportData(){var blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='words-backup-'+today()+'.json';a.click();URL.revokeObjectURL(url);toast('备份已导出')}
 function importData(e){var f=e.target.files&&e.target.files[0];if(!f)return;var fr=new FileReader();fr.onload=function(){try{state=normalize(JSON.parse(fr.result));save();session=null;renderAll();toast('备份导入成功')}catch(err){toast('文件格式错误')}};fr.readAsText(f);e.target.value=''}
 function resetData(){if(!confirm('确定清空全部学习记录？内置词库不会删除。'))return;state=JSON.parse(JSON.stringify(DEFAULT));save();session=null;renderAll();toast('学习记录已清空')}
-function renderStreak(){$('streakEl').textContent='连续 '+(state.streak.count||0)+' 天';refreshPTT()}
+function renderStreak(){$('streakEl').textContent='连续 '+(state.streak.count||0)+' 天';refreshPTT();refreshSyncDot()}
+
+/* ---------- 云端账号与跨设备同步（Supabase） ---------- */
+var ACCT_SQL='create table if not exists public.words_progress (\n  user_id uuid primary key references auth.users(id) on delete cascade,\n  data jsonb not null default \'{}\'::jsonb,\n  updated_at timestamptz not null default now()\n);\nalter table public.words_progress enable row level security;\ncreate policy "own_row" on public.words_progress\n  for all using (auth.uid() = user_id)\n  with check (auth.uid() = user_id);';
+var sbClient=null,sbUser=null,sbLoading=null,syncTimer=null,syncing=false,sbLastErr='';
+function sbConfigured(){return !!(SB.url&&SB.anonKey)}
+function mkClient(){sbClient=window.supabase.createClient(SB.url,SB.anonKey,{auth:{persistSession:true,autoRefreshToken:true}});return sbClient}
+function loadSB(){
+  if(sbClient)return Promise.resolve(sbClient);
+  if(!sbConfigured())return Promise.reject(new Error('未配置 Supabase'));
+  if(sbLoading)return sbLoading;
+  sbLoading=new Promise(function(res,rej){
+    if(window.supabase&&window.supabase.createClient){try{return res(mkClient())}catch(e){return rej(e)}}
+    var s=document.createElement('script');s.src=SB.cdn;s.async=true;
+    s.onload=function(){try{res(mkClient())}catch(e){rej(e)}};
+    s.onerror=function(){sbLoading=null;rej(new Error('Supabase SDK 加载失败，请检查网络'))};
+    document.head.appendChild(s);
+  });
+  return sbLoading;
+}
+function sbErr(e){sbLastErr=(e&&e.message)?e.message:String(e);refreshSyncDot();return sbLastErr}
+function refreshSyncDot(){
+  var d=$('dataStatus');if(!d)return;d.className='sync-dot';
+  var t;
+  if(!sbConfigured()){d.classList.add('off');t='纯本地存储 · 未配置云端同步'}
+  else if(syncing){d.classList.add('busy');t='正在同步…'}
+  else if(sbUser){t='已登录 '+(sbUser.email||'')+(state.sync&&state.sync.lastAt?' · 上次同步 '+new Date(state.sync.lastAt).toLocaleString():'')+' · 点击立即同步'}
+  else if(sbLastErr){d.classList.add('err');t='同步异常：'+sbLastErr}
+  else {d.classList.add('off');t='云端已配置 · 未登录'}
+  d.title=t;
+}
+function acctMsg(s){var m=$('acctMsg');if(m)m.textContent=s}
+function cloudLogin(){
+  var em=(($('acctEmail')||{}).value||'').trim(),pw=($('acctPwd')||{}).value||'';
+  if(!em||!pw){toast('请输入邮箱和密码');return}
+  acctMsg('登录中…');
+  loadSB().then(function(sb){return sb.auth.signInWithPassword({email:em,password:pw})}).then(function(r){
+    if(r.error)throw r.error;
+    sbUser=r.data.user;sbLastErr='';toast('已登录 '+(sbUser.email||''));renderSettings();cloudSyncSmart(true);
+  }).catch(function(e){acctMsg('');toast('登录失败：'+((e&&e.message)||e))});
+}
+function cloudRegister(){
+  var em=(($('acctEmail')||{}).value||'').trim(),pw=($('acctPwd')||{}).value||'';
+  if(!em||!pw){toast('请输入邮箱和密码');return}
+  if(pw.length<6){toast('密码至少 6 位');return}
+  acctMsg('注册中…');
+  loadSB().then(function(sb){return sb.auth.signUp({email:em,password:pw})}).then(function(r){
+    if(r.error)throw r.error;
+    if(r.data&&r.data.session){sbUser=r.data.user;sbLastErr='';acctMsg('');toast('注册成功，已登录');renderSettings();cloudSyncSmart(true)}
+    else{acctMsg('');toast('注册成功，请到邮箱确认后再登录')}
+  }).catch(function(e){acctMsg('');toast('注册失败：'+((e&&e.message)||e))});
+}
+function cloudLogout(){
+  loadSB().then(function(sb){return sb.auth.signOut()}).catch(function(e){sbErr(e)}).then(function(){
+    sbUser=null;sbLastErr='';toast('已退出登录');refreshSyncDot();renderSettings();
+  });
+}
+function sbRestore(){
+  if(!sbConfigured())return Promise.resolve(null);
+  return loadSB().then(function(sb){return sb.auth.getSession()}).then(function(r){
+    sbUser=r&&r.data&&r.data.session?r.data.session.user:null;return sbUser;
+  }).catch(function(e){sbErr(e);return null});
+}
+function sbPull(){return loadSB().then(function(sb){return sb.from(SB.table).select('data,updated_at').eq('user_id',sbUser.id).maybeSingle()})}
+function sbPush(){return loadSB().then(function(sb){return sb.from(SB.table).upsert({user_id:sbUser.id,data:state,updated_at:new Date().toISOString()})})}
+function applyRemote(data){state=normalize(data);persistLocal();session=null;renderAll();}
+function markSynced(at){state.sync.lastAt=at||Date.now();persistLocal();refreshSyncDot();var el=$('acctLast');if(el)el.textContent=new Date(state.sync.lastAt).toLocaleString()}
+function scheduleSync(){if(!sbUser||!state.sync||!state.sync.auto)return;if(syncTimer)clearTimeout(syncTimer);syncTimer=setTimeout(function(){cloudSyncSmart(true)},4000)}
+function cloudPush(silent){
+  if(!sbUser){if(!silent)toast('请先登录');return Promise.resolve(false)}
+  syncing=true;refreshSyncDot();
+  return sbPush().then(function(r){
+    syncing=false;
+    if(r.error){sbErr(r.error);if(!silent)toast('同步失败：'+r.error.message);return false}
+    markSynced();if(!silent)toast('已上传到云端');return true;
+  }).catch(function(e){syncing=false;sbErr(e);if(!silent)toast('同步失败：'+sbLastErr);return false});
+}
+function cloudPull(force){
+  if(!sbUser){if(!force)toast('请先登录');return Promise.resolve(false)}
+  syncing=true;refreshSyncDot();
+  return sbPull().then(function(r){
+    syncing=false;
+    if(r.error){sbErr(r.error);toast('读取云端失败：'+r.error.message);return false}
+    if(!r.data){return cloudPush(false)}
+    applyRemote(r.data.data);markSynced(Date.parse(r.data.updated_at)||Date.now());
+    toast('已从云端恢复');renderSettings();return true;
+  }).catch(function(e){syncing=false;sbErr(e);toast('读取云端失败：'+sbLastErr);return false});
+}
+/* 智能同步：云端较新则拉取，否则上传本地 */
+function cloudSyncSmart(silent){
+  if(!sbUser)return Promise.resolve(false);
+  return sbPull().then(function(r){
+    if(r.error)throw r.error;
+    var remote=r.data,remoteAt=remote?(Date.parse(remote.updated_at)||0):0,localAt=(state.sync&&state.sync.lastAt)||0;
+    if(remote&&remoteAt>localAt+2000){
+      applyRemote(remote.data);state.sync.lastAt=remoteAt;persistLocal();refreshSyncDot();
+      if(!silent)toast('云端较新，已拉取');return true;
+    }
+    return cloudPush(true).then(function(ok){if(ok&&!silent)toast('已同步到云端');return ok});
+  }).catch(function(e){sbErr(e);if(!silent)toast('同步失败：'+sbLastErr);return false});
+}
+function accountPanelHtml(){
+  if(!sbConfigured()){
+    return '<p class="muted">跨设备同步需要接入 <b>Supabase</b>（免费额度足够）。当前为纯本地模式，数据只存在这台设备。</p>'+
+      '<div class="tiny" style="margin-top:8px">启用步骤：① 在 <b>supabase.com</b> 新建项目；② 打开 <b>SQL Editor</b> 执行下面的建表语句；③ 到 <b>Project Settings → API</b> 复制 <b>Project URL</b> 与 <b>anon public key</b>，填入 <b>index.html</b> 顶部的 <span class="kbd">SB</span> 配置对象即可。</div>'+
+      '<div class="sql">'+escapeHtml(ACCT_SQL)+'</div>';
+  }
+  if(!sbUser){
+    return '<p class="muted">登录后学习进度会在多台设备间同步。首次登录时，若云端已有记录且较新，会自动拉取云端。</p>'+
+      '<input id="acctEmail" class="acct-input" type="email" autocomplete="username" placeholder="邮箱">'+
+      '<input id="acctPwd" class="acct-input" type="password" autocomplete="current-password" placeholder="密码（至少 6 位）">'+
+      '<div id="acctMsg" class="acct-status" style="margin-top:8px"></div>'+
+      '<div class="actions"><button class="btn primary" id="acctLogin" type="button">登录</button><button class="btn ghost" id="acctReg" type="button">注册</button></div>'+
+      '<div class="tiny" style="margin-top:8px">已连接 <b>'+escapeHtml(SB.url.replace(/^https?:\/\//,'').replace(/\/+$/,''))+'</b>。未登录时一切照旧，数据只存本地。</div>';
+  }
+  var last=(state.sync&&state.sync.lastAt)?new Date(state.sync.lastAt).toLocaleString():'—';
+  return '<div class="acct-status">已登录：<b>'+escapeHtml(sbUser.email||'')+'</b><br>上次同步：<span id="acctLast">'+escapeHtml(last)+'</span></div>'+
+    '<div class="actions"><button class="btn primary" id="acctSync" type="button">立即同步</button><button class="btn ghost" id="acctUpload" type="button">上传本地</button></div>'+
+    '<div class="actions"><button class="btn ghost" id="acctPull" type="button">从云端恢复</button><button class="btn ghost" id="acctOut" type="button">退出登录</button></div>'+
+    '<div class="toggle"><span>自动同步（作答后自动上传）</span><input id="acctAuto" class="switch" type="checkbox" '+(state.sync&&state.sync.auto!==false?'checked':'')+'></div>'+
+    '<div class="tiny">「立即同步」：云端较新则拉取，否则上传本地；「上传本地」用本机覆盖云端；「从云端恢复」用云端覆盖本机。多设备同时改动以最后同步时间为准。</div>';
+}
+function bindAccountPanel(){
+  var em=$('acctEmail');if(em)em.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();cloudLogin()}};
+  var pw=$('acctPwd');if(pw)pw.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();cloudLogin()}};
+  if($('acctLogin'))$('acctLogin').onclick=cloudLogin;
+  if($('acctReg'))$('acctReg').onclick=cloudRegister;
+  if($('acctSync'))$('acctSync').onclick=function(){cloudSyncSmart(false)};
+  if($('acctUpload'))$('acctUpload').onclick=function(){cloudPush(false)};
+  if($('acctPull'))$('acctPull').onclick=function(){if(confirm('将用云端数据覆盖本机学习记录，确定吗？'))cloudPull(true)};
+  if($('acctOut'))$('acctOut').onclick=cloudLogout;
+  if($('acctAuto'))$('acctAuto').onchange=function(e){state.sync.auto=e.target.checked;save();toast(state.sync.auto?'已开启自动同步':'已关闭自动同步')};
+}
+function restoreCloud(){
+  if(!sbConfigured())return;
+  sbRestore().then(function(u){refreshSyncDot();if(u)return cloudSyncSmart(true)}).catch(function(e){sbErr(e)});
+}
+var dsEl=$('dataStatus');if(dsEl)dsEl.onclick=function(){if(sbUser)cloudSyncSmart(false);else{if(sbConfigured())showView('settings');else toast('未配置云端同步')}};
 
 /* ---------- keyboard ---------- */
 document.addEventListener('keydown',function(e){
@@ -985,6 +1136,8 @@ function boot(){
     renderStreak();
     start(false);
     toast('词库已就绪 · '+WORDS.length.toLocaleString()+' 词');
+    refreshSyncDot();
+    restoreCloud();
   }catch(e){showError(e)}
 }
 window.addEventListener('beforeinstallprompt',function(e){
