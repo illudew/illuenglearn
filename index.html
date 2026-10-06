@@ -222,7 +222,7 @@ var PTT={BASE_PEN:0.15,PEN_CAP_ABS:2.0,PEN_TO_PROF:0.10,ERR_W:0.30,FORGET_W:0.20
 /* Supabase 云端账号与跨设备同步配置：填好下面 url 与 anonKey 后，账号功能自动启用（不填则保持纯本地）。
    获取方式：supabase.com 新建项目 → Project Settings → API，复制 Project URL 与 anon public key。
    建表 SQL 见设置页「云端账号」面板。 */
-var SB={url:'',anonKey:'',table:'words_progress',cdn:'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js'};
+var SB={url:'https://pxzirgzyryohqqinrgxu.supabase.co',anonKey:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB4emlyZ3p5cnlvaHFxaW5yZ3h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNTQ4MzUsImV4cCI6MjEwNjgzMDgzNX0.BMTh2RNH4eni3j4ktKaS44aE0MgpbxV8-3EwQPjv1-8',table:'words_progress',cdn:'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js'};
 var DEFAULT={settings:{dailyNew:300,reviewLimit:300,level:5,mode:'en2zh',accent:'us',speechRate:0.92,autoSpeak:false},words:{},days:{},streak:{count:0,last:null},totalAnswers:0,totalCorrect:0,totalSeconds:0,recent:[],pttHistory:[],sync:{auto:true,lastAt:0}};
 
 /* ---------- word bank ---------- */
