@@ -261,6 +261,8 @@ var PTT={BASE_PEN:0.15,PEN_CAP_ABS:2.0,PEN_TO_PROF:0.10,ERR_W:0.30,FORGET_W:0.20
 /* 专有名词专栏（星期月份 / 常见国家地名 / 常见缩写 / 常见术语）：独立难度档，单独学习，不计入 PTT */
 var PROP_LV=12;
 function lvName(L){return L===PROP_LV?'专有名词':'Lv.'+L}
+/* 每日任务目标：固定 20 个不同单词（与每日新词、到期复习量无关），答满 80% 即 16 词签到 */
+var DAILY_GOAL=20;
 /* Supabase 云端账号与跨设备同步配置：填好下面 url 与 anonKey 后，账号功能自动启用（不填则保持纯本地）。
    获取方式：supabase.com 新建项目 → Project Settings → API，复制 Project URL 与 anon public key。
    建表 SQL 见设置页「云端账号」面板。 */
@@ -282,11 +284,11 @@ function diffDays(a,b){return Math.round((new Date(b+'T12:00:00')-new Date(a+'T1
 function startOfToday(){var d=new Date();d.setHours(0,0,0,0);return d.getTime()}
 /* 今日已作答过的不同单词数（新学 + 复习，含抽查），用于衡量每日任务完成度 */
 function answeredTodayCount(){var s=startOfToday(),n=0;Object.keys(state.words).forEach(function(w){var r=state.words[w];if(r.seen>0&&(r.last||0)>=s)n++});return n}
-/* 每日任务目标 = 今日新词目标 + 当天开始时到期复习数（首次进入当天时固定下来） */
+/* 每日任务目标：固定 20 个不同单词，每轮进入都校正（旧存档的目标值会被覆盖） */
 function ensureDayTarget(){
   var t=today();if(!state.days[t])state.days[t]={answers:0,correct:0,done:false};
   var d=state.days[t];
-  if(!d.target){d.target=state.settings.dailyNew+Math.min(getDue().length,state.settings.reviewLimit)}
+  d.target=DAILY_GOAL;
   return d;
 }
 function dailyProgress(){var d=state.days[today()];if(!d||!d.target)return 0;return Math.min(1,answeredTodayCount()/d.target)}
