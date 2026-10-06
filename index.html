@@ -50,7 +50,7 @@ button{cursor:pointer}
 .progress-head{display:flex;justify-content:space-between;font-size:11.5px;color:#7c8798;margin-bottom:6px}
 .bar{height:6px;background:#171b22;border-radius:99px;overflow:hidden;border:1px solid #202530}
 .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#4f8cff,#84aefe);border-radius:99px;transition:width .3s ease}
-.card{background:#11141a;border:1px solid #272d37;border-radius:20px;padding:21px 19px 18px;box-shadow:0 14px 40px rgba(0,0,0,.24)}
+.card{position:relative;overflow:hidden;background:#11141a;border:1px solid #272d37;border-radius:20px;padding:21px 19px 18px;box-shadow:0 14px 40px rgba(0,0,0,.24)}
 .card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px}
 .pills{display:flex;gap:6px;flex-wrap:wrap}
 .pill{font-size:10.5px;padding:4px 9px;border-radius:999px;background:rgba(79,140,255,.12);border:1px solid rgba(79,140,255,.27);color:#8fb4ff}
@@ -102,6 +102,29 @@ button{cursor:pointer}
 .finish .icon{font-size:38px;margin-bottom:10px;color:#53e0a0}
 .finish h2{font-size:21px;margin:4px 0 7px}
 .finish p{margin:0;color:#808a9a;line-height:1.7;font-size:13px}
+/* 作答弹出字样：答对 pure(蓝) / 答错 lost(红) / 拼写接近 far(黄) */
+.verdict{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) scale(.55);font-size:46px;font-weight:800;letter-spacing:6px;opacity:0;pointer-events:none;z-index:6;white-space:nowrap}
+.verdict.show{animation:verdictPop 1s cubic-bezier(.2,.8,.3,1) forwards}
+@keyframes verdictPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.55)}16%{opacity:1;transform:translate(-50%,-50%) scale(1.14)}30%{transform:translate(-50%,-50%) scale(1)}72%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}
+.verdict.pure{color:#5b9dff;text-shadow:0 0 22px rgba(91,157,255,.8),0 0 4px rgba(91,157,255,.9)}
+.verdict.lost{color:#ff6b6b;text-shadow:0 0 22px rgba(255,107,107,.8),0 0 4px rgba(255,107,107,.9)}
+.verdict.far{color:#ffce4d;text-shadow:0 0 22px rgba(255,206,77,.8),0 0 4px rgba(255,206,77,.9)}
+/* 一轮结算页：全对 Pure Memory(紫) / ≥70% Track Complete(蓝) / <70% Track Lost(红) */
+.settle{text-align:center;padding:32px 18px 24px;border-radius:20px;border:1px solid #272d37;background:#11141a;animation:settleIn .38s cubic-bezier(.2,.8,.3,1)}
+@keyframes settleIn{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+.settle-eyebrow{font-size:10.5px;letter-spacing:3px;color:#697386}
+.settle-title{font-size:31px;font-weight:800;letter-spacing:.5px;margin:9px 0 7px}
+.settle-sub{font-size:12.5px;color:#8b95a6;margin-bottom:20px;line-height:1.6}
+.settle-stats{display:flex;justify-content:center;gap:30px;margin-bottom:18px}
+.settle-stats b{display:block;font-size:23px;font-weight:750}
+.settle-stats span{font-size:10.5px;color:#6f7a8c}
+.settle-note{font-size:11px;color:#6f7a8c;margin-bottom:18px}
+.settle.pure{border-color:rgba(160,107,255,.55);box-shadow:0 0 40px rgba(160,107,255,.18) inset}
+.settle.pure .settle-title{color:#b892ff;text-shadow:0 0 26px rgba(160,107,255,.65)}
+.settle.complete{border-color:rgba(79,140,255,.55);box-shadow:0 0 40px rgba(79,140,255,.16) inset}
+.settle.complete .settle-title{color:#82b2ff;text-shadow:0 0 26px rgba(79,140,255,.6)}
+.settle.lost{border-color:rgba(255,107,107,.55);box-shadow:0 0 40px rgba(255,107,107,.16) inset}
+.settle.lost .settle-title{color:#ff9090;text-shadow:0 0 26px rgba(255,107,107,.6)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .stat{background:#11141a;border:1px solid #252b35;border-radius:15px;padding:15px}
 .stat .k{font-size:10.5px;color:#737e90}
@@ -401,6 +424,30 @@ function nextAutoMode(){
   return mode;
 }
 function normWord(s){return String(s==null?'':s).trim().toLowerCase()}
+/* 编辑距离（Levenshtein），用于判定拼写是否“只差几个字母” */
+function editDistance(a,b){
+  a=String(a||'');b=String(b||'');
+  if(a===b)return 0;
+  var m=a.length,n=b.length;if(!m)return n;if(!n)return m;
+  var prev=new Array(n+1),cur=new Array(n+1),i,j;
+  for(j=0;j<=n;j++)prev[j]=j;
+  for(i=1;i<=m;i++){
+    cur[0]=i;
+    for(j=1;j<=n;j++){
+      var cost=a.charAt(i-1)===b.charAt(j-1)?0:1;
+      cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+cost);
+    }
+    var swap=prev;prev=cur;cur=swap;
+  }
+  return prev[n];
+}
+/* 输入型题型里“拼写接近正确”：有差异但差距不超过目标词长的 1/4（至少 1 个字母） */
+function nearMiss(input,target){
+  var a=normWord(input),b=normWord(target);
+  if(!a||a===b)return false;
+  var d=editDistance(a,b),tol=Math.max(1,Math.min(3,Math.floor(b.length/3)));
+  return d<=tol;
+}
 function allowNew(d){return d.baseLv===state.settings.level}
 function priority(d){var r=state.words[d.w];var p=personalLevel(d,r);var struggle=r?((r.productionWrong||0)*2+(r.meaningWrong||0)+(r.hints||0)*0.3):0;var stage=r?(r.stage||0):0;return p*0.6+struggle*0.35+stage*0.05+Math.random()*0.7}
 function getDue(){var t=Date.now();return Object.keys(state.words).filter(function(w){var r=state.words[w];return MAP[w]&&r.seen>0&&r.dueAt<=t}).sort(function(a,b){return (state.words[a].dueAt||0)-(state.words[b].dueAt||0)})}
@@ -575,7 +622,7 @@ function renderCard(){
            '<div class="meaning">'+escapeHtml(d.zh)+'<span class="sub">根据例句与中文含义，选择正确的英文单词</span></div>'+optsHtml;
     }
   }
-  $('study-card').innerHTML='<div class="card"><div class="card-top"><div class="pills">'+
+  $('study-card').innerHTML='<div class="card"><div id="verdict" class="verdict"></div><div class="card-top"><div class="pills">'+
      '<span class="pill">'+phLabel+'</span><span class="pill dim">记忆难度 Lv.'+lv+'</span><span class="pill dim">基点 Lv.'+d.baseLv+'</span><span class="pill dim">熟练度 '+proficiencyPct(r)+'%</span><span class="pill dim">本词潜在 '+wordPtt(d,r).toFixed(2)+'</span>'+
      '</div><span class="phonetic">'+(session.cards+1)+' / '+session.total+'</span></div>'+
      body+
@@ -792,10 +839,20 @@ function submit(force,chosenW){
   markDay(ok);
   save();showFeedback(ok,d,md,r,chosenW,force);
 }
+/* 作答后弹出的即时评价：pure(蓝·答对) / lost(红·答错) / far(黄·拼写只差几个字母) */
+function showVerdict(v){
+  var e=$('verdict');if(!e)return;
+  e.className='verdict';
+  e.textContent=v;
+  void e.offsetWidth;   /* 强制重排，保证同一张卡重复作答时动画重放 */
+  e.className='verdict '+v+' show';
+}
 function showFeedback(ok,d,md,r,chosenW,force){
   phase='feedback';
   updatePlan();
   var typed=isTypedMode(md);
+  var verdict=ok?'pure':(typed&&!force&&chosenW&&nearMiss(chosenW,d.w)?'far':'lost');
+  showVerdict(verdict);
   /* 标记选项对错，并锁定选项 */
   document.querySelectorAll('#options .opt').forEach(function(b){
     b.disabled=true;
@@ -814,6 +871,7 @@ function showFeedback(ok,d,md,r,chosenW,force){
     :(r?'<div class="ptt-note">本词潜在 '+wordPtt(d,r).toFixed(2)+' · 熟练度 '+proficiencyPct(r)+'%'+(pen>0.005?' · 惩罚 −'+pen.toFixed(2):'')+(r.streak?' · 连对 '+r.streak:'')+'</div>':'');
   var head;
   if(ok)head=firstMeet?'✓ 已认识，稍后会再考你一次确认。':(typed?'✓ 拼写正确，记忆阶段已上升。':'✓ 选择正确，记忆阶段已上升。');
+  else if(verdict==='far')head='✗ 就差一点！正确写法：<strong>'+escapeHtml(d.w)+'</strong>';
   else head=force?'✗ 已标记为完全忘记。':(firstMeet?'✗ 先记住它，稍后会再考你一次。':'✗ 正确答案：<strong>'+escapeHtml(d.w)+'</strong>');
   fb.innerHTML=head+pttNote;
   var box=$('detailBox');
@@ -856,13 +914,24 @@ function markDay(ok){
   if(!d.done&&dailyProgress()>=0.8){d.done=true;updateStreak();toast('每日任务已达标（≥80%），今日签到成功')}
 }
 function updateStreak(){var t=today(),s=state.streak;if(s.last===t)return;if(s.last&&addDays(s.last,1)===t)s.count++;else s.count=1;s.last=t}
+/* 一轮结算分级：全对 → pure(Pure Memory)；正确率 ≥70% → complete(Track Complete)；否则 lost(Track Lost) */
+function roundTier(cards,correct){if(!cards)return 'lost';if(correct>=cards)return 'pure';return Math.round(correct/cards*100)>=70?'complete':'lost'}
 function finish(){
   var cards=session?session.cards:0,cor=session?session.correct:0;
   session=null;phase='question';save();renderStudy();
   var c=$('study-card');if(!c)return;
   var signed=state.days[today()]&&state.days[today()].done;
-  c.innerHTML='<div class="finish"><div class="icon">✓</div><h2>本轮完成</h2><p>共作答 '+cards+' 张卡片，正确 '+cor+' 次。'+(signed?'今日任务已达标，签到成功。':'每日任务达到 80% 才算签到，可以再来一轮继续。')+'</p>'+
-   '<div class="actions"><button class="btn ghost" id="extraBtn" type="button">再来一轮</button><button class="btn primary" id="statsBtn" type="button">统计</button></div></div>';
+  var acc=cards?Math.round(cor/cards*100):0;
+  var tier=roundTier(cards,cor);
+  var title=tier==='pure'?'Pure Memory':tier==='complete'?'Track Complete':'Track Lost';
+  var sub=tier==='pure'?'全程零失误，这一轮完美掌握。':tier==='complete'?'状态在线，保持这个节奏。':'别灰心，错题会重新排进复习。';
+  c.innerHTML='<div class="settle '+tier+'">'+
+   '<div class="settle-eyebrow">ROUND RESULT</div>'+
+   '<div class="settle-title">'+title+'</div>'+
+   '<div class="settle-sub">'+sub+'</div>'+
+   '<div class="settle-stats"><div><b>'+cards+'</b><span>作答卡片</span></div><div><b>'+cor+'</b><span>答对</span></div><div><b>'+acc+'%</b><span>正确率</span></div></div>'+
+   '<div class="settle-note">'+(signed?'今日任务已达标，签到成功。':'每日任务达到 80% 才算签到，可以再来一轮继续。')+'</div>'+
+   '<div class="actions"><button class="btn ghost" id="extraBtn" type="button">再来一轮</button><button class="btn primary" id="statsBtn" type="button">查看统计</button></div></div>';
   $('extraBtn').onclick=function(){start(true)};$('statsBtn').onclick=function(){showView('stats')};
 }
 
