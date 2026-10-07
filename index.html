@@ -109,7 +109,7 @@ button{cursor:pointer}
 .verdict.pure{color:#5b9dff;text-shadow:0 0 22px rgba(91,157,255,.8),0 0 4px rgba(91,157,255,.9)}
 .verdict.lost{color:#ff6b6b;text-shadow:0 0 22px rgba(255,107,107,.8),0 0 4px rgba(255,107,107,.9)}
 .verdict.far{color:#ffce4d;text-shadow:0 0 22px rgba(255,206,77,.8),0 0 4px rgba(255,206,77,.9)}
-/* 一轮结算页：全对 Pure Memory(紫) / ≥70% Track Complete(蓝) / <70% Track Lost(红) */
+/* 一轮结算页：全对 Pure Memory(紫) / 零 lost 但非全对 Full Recall(蓝紫之间) / ≥70% Track Complete(蓝) / <70% Track Lost(红) */
 .settle{text-align:center;padding:32px 18px 24px;border-radius:20px;border:1px solid #272d37;background:#11141a;animation:settleIn .38s cubic-bezier(.2,.8,.3,1)}
 @keyframes settleIn{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
 .settle-eyebrow{font-size:10.5px;letter-spacing:3px;color:#697386}
@@ -127,6 +127,8 @@ button{cursor:pointer}
 .settle-verdicts .vs.lost{color:#ff6b6b;border-color:rgba(255,107,107,.45);background:rgba(255,107,107,.08)}
 .settle.pure{border-color:rgba(160,107,255,.55);box-shadow:0 0 40px rgba(160,107,255,.18) inset}
 .settle.pure .settle-title{color:#b892ff;text-shadow:0 0 26px rgba(160,107,255,.65)}
+.settle.full{border-color:rgba(124,124,255,.55);box-shadow:0 0 40px rgba(124,124,255,.17) inset}
+.settle.full .settle-title{color:#9c9dff;text-shadow:0 0 26px rgba(124,124,255,.62)}
 .settle.complete{border-color:rgba(79,140,255,.55);box-shadow:0 0 40px rgba(79,140,255,.16) inset}
 .settle.complete .settle-title{color:#82b2ff;text-shadow:0 0 26px rgba(79,140,255,.6)}
 .settle.lost{border-color:rgba(255,107,107,.55);box-shadow:0 0 40px rgba(255,107,107,.16) inset}
@@ -274,7 +276,7 @@ var WORDS=(window.WORDS_BANK||[]).map(function(a){return {w:a[0],us:a[1]||'',uk:
 var MAP={};WORDS.forEach(function(d){MAP[d.w]=d});
 
 /* ---------- state ---------- */
-var state=load(),session=null,phase='question',qStart=0,renderSeq=0,dictCache={},curOptions=[],BYLV={},BYINIT={};
+var state=load(),session=null,phase='question',qStart=0,renderSeq=0,dictCache={},curOptions=[],BYLV={},BYINIT={},hintUsed=false;
 
 /* ---------- helpers ---------- */
 function clamp(v,a,b){a=a==null?1:a;b=b==null?PROP_LV:b;return Math.max(a,Math.min(b,v))}
@@ -319,11 +321,14 @@ function save(){try{localStorage.setItem(STORE,JSON.stringify(state))}catch(e){}
 function persistLocal(){try{localStorage.setItem(STORE,JSON.stringify(state))}catch(e){}}
 
 /* ---------- memory model ---------- */
-function userRec(w){var r=state.words[w];if(!r){r={stage:0,dueAt:Date.now(),introduced:null,meaningCorrect:0,productionCorrect:0,meaningWrong:0,productionWrong:0,hints:0,seen:0,correct:0,responseMs:0,streak:0,errStreak:0,penalty:0,last:0};state.words[w]=r}return r}
+function userRec(w){var r=state.words[w];if(!r){r={stage:0,dueAt:Date.now(),introduced:null,meaningCorrect:0,productionCorrect:0,meaningWrong:0,productionWrong:0,hints:0,seen:0,correct:0,responseMs:0,streak:0,errStreak:0,penalty:0,memDamp:1,last:0};state.words[w]=r}return r}
 function personalLevel(d,r){r=r||{};var lv=d.baseLv;var wrong=(r.meaningWrong||0)+(r.productionWrong||0);lv+=Math.min(2.4,wrong*0.34);lv-=Math.min(1.4,(r.streak||0)*0.2);lv+=Math.min(1.0,(r.hints||0)*0.06);return clamp(Math.round(lv),1,d.baseLv===PROP_LV?PROP_LV:11)}
-/* 熟练度 0..1：记忆阶段为主(80%)，正确率为辅(20%)。答错 stage 会回落，熟练度随之下降。 */
-function proficiency(r){r=r||{};if(!(r.seen>0))return 0;var st=Math.min(MAX_STAGE,r.stage||0)/MAX_STAGE;var acc=(r.correct||0)/r.seen;var p=st*0.8+acc*0.2;return Math.max(0,Math.min(1,p))}
+/* 熟练度 0..1：记忆阶段为主(80%)，正确率为辅(20%)。答错 stage 会回落，熟练度随之下降。
+   memDamp 为记忆率折扣（默认 1）：用了提示会被扣掉一半，之后一直生效。 */
+function proficiency(r){r=r||{};if(!(r.seen>0))return 0;var st=Math.min(MAX_STAGE,r.stage||0)/MAX_STAGE;var acc=(r.correct||0)/r.seen;var p=st*0.8+acc*0.2;var damp=r.memDamp==null?1:r.memDamp;return Math.max(0,Math.min(1,p*damp))}
 function proficiencyPct(r){return Math.round(proficiency(r)*100)}
+/* 用过提示：把该词记忆率（熟练度）直接砍掉一半 */
+function halveMemory(r){if(!r)return;r.memDamp=(r.memDamp==null?1:r.memDamp)*0.5}
 /* ---------- Potential（对数总量制）---------- */
 /* 惩罚随时间自然衰减（每过一天 ×0.95），30 天基本归零 */
 function effPenalty(r){var p=(r&&r.penalty)||0;if(p<=0)return 0;var days=(r&&r.last)?Math.max(0,(Date.now()-r.last)/864e5):0;return p*Math.pow(PTT.DECAY,days)}
@@ -612,6 +617,7 @@ function renderCard(){
   if(!session){return}
   if(!session.queue.length){finish();return}
   if(!$('study-card'))renderStudy();
+  hintUsed=false;   /* 新卡片：重置「本题是否用过提示」 */
   updatePlan();refreshSpeakLabel();
   var seq=++renderSeq;
   var item=session.queue[0];
@@ -739,11 +745,12 @@ function speak(w,accent){
 }
 function hint(){
   var d=currentData();if(!d||!session||phase!=='question')return;
-  var r=currentRec();r.hints=(r.hints||0)+1;save();
+  var r=currentRec();r.hints=(r.hints||0)+1;hintUsed=true;save();
   var fb=$('feedback');fb.className='feedback';
   var md=cardMode(session.queue[0]);
   if(md==='en2zh'){fb.innerHTML='提示：'+escapeHtml(d.zh.split(/[；;，,、/|]/)[0]||'先回忆最常见义项。')}
   else{fb.innerHTML='提示：<strong>'+escapeHtml(d.w[0])+'</strong> 开头，共 '+d.w.length+' 个字母。'}
+  fb.innerHTML+='<div class="ptt-note">已用提示：本题答对记为 far，答错记为 lost，本词记忆率减半。</div>';
 }
 
 /* ---------- 选择题：索引与选项 ---------- */
@@ -828,10 +835,12 @@ function submit(force,chosenW){
   if(firstMeet)r.introduced=today();
   r.responseMs=(r.responseMs||0)+elapsed;state.totalAnswers++;state.totalSeconds+=elapsed/1000;
   var ok=typed?(!force&&normWord(chosenW)===normWord(item.w)):(!force&&chosenW===item.w);
+  var usedHint=hintUsed;   /* 本题是否点过提示：答对记 far、答错记 lost，且记忆率减半 */
   /* PTT：先结算惩罚的时间衰减，再按本次结果更新 */
   r.penalty=effPenalty(r);r.last=Date.now();
   if(ok){
-    state.totalCorrect++;session.correct++;r.correct=(r.correct||0)+1;r.streak=(r.streak||0)+1;r.errStreak=0;
+    if(!usedHint){state.totalCorrect++;session.correct++;}
+    r.correct=(r.correct||0)+1;r.streak=(r.streak||0)+1;r.errStreak=0;
     if(md==='en2zh')r.meaningCorrect=(r.meaningCorrect||0)+1;else r.productionCorrect=(r.productionCorrect||0)+1;
     r.stage=Math.min(MAX_STAGE,(r.stage||0)+1);
     r.dueAt=Date.now()+EBB[r.stage];
@@ -847,6 +856,8 @@ function submit(force,chosenW){
     var add=Math.max(0,penaltyAdd(d,r,force,md)-shield);
     r.penalty=Math.min((r.penalty||0)+add,((d.baseLv||1)*0.5),PTT.PEN_CAP_ABS);
   }
+  /* 用过提示：本题记忆率直接减半（在常规结算之后再打折） */
+  if(usedHint)halveMemory(r);
   /* 队列推进：初识词先隔几个词再考一次（复现通过后才解锁 PTT）；其余按对错正常排程 */
   session.cards++;
   var rec=session.queue.shift();
@@ -862,7 +873,12 @@ function submit(force,chosenW){
   markDay(ok);
   save();showFeedback(ok,d,md,r,chosenW,force);
 }
-/* 作答后弹出的即时评价：pure(蓝·答对) / lost(红·答错) / far(黄·拼写只差几个字母) */
+/* 作答后弹出的即时评价：pure(蓝·答对) / lost(红·答错) / far(黄·拼写只差几个字母，或用过提示后答对) */
+function judgeVerdict(ok,usedHint,typed,force,chosenW,word){
+  if(ok)return usedHint?'far':'pure';
+  if(!usedHint&&typed&&!force&&chosenW&&nearMiss(chosenW,word))return 'far';
+  return 'lost';
+}
 function showVerdict(v){
   var e=$('verdict');if(!e)return;
   e.className='verdict';
@@ -874,7 +890,7 @@ function showFeedback(ok,d,md,r,chosenW,force){
   phase='feedback';
   updatePlan();
   var typed=isTypedMode(md);
-  var verdict=ok?'pure':(typed&&!force&&chosenW&&nearMiss(chosenW,d.w)?'far':'lost');
+  var verdict=judgeVerdict(ok,hintUsed,typed,force,chosenW,d.w);
   /* 本轮结算统计：pure / far / lost 个数，以及本轮出现过的去重单词数 */
   if(session){if(verdict==='pure')session.vPure++;else if(verdict==='far')session.vFar++;else session.vLost++;
     if(session.uniq&&!session.uniq[d.w]){session.uniq[d.w]=1;session.uniqN++}}
@@ -893,10 +909,12 @@ function showFeedback(ok,d,md,r,chosenW,force){
   var fb=$('feedback');fb.className='feedback '+(ok?'ok':'bad');
   var pen=r?effPenalty(r):0;
   var firstMeet=!!(r&&r.seen===1);
+  var usedHint=hintUsed;
+  var damp=(r&&r.memDamp!=null&&r.memDamp<1)?' · 记忆率 ×'+r.memDamp:'';
   var pttNote=firstMeet?'<div class="ptt-note">初识 · 本轮不计入 PTT，稍后会再考你一次</div>'
-    :(r?'<div class="ptt-note">本词潜在 '+wordPtt(d,r).toFixed(2)+' · 熟练度 '+proficiencyPct(r)+'%'+(pen>0.005?' · 惩罚 −'+pen.toFixed(2):'')+(r.streak?' · 连对 '+r.streak:'')+'</div>':'');
+    :(r?'<div class="ptt-note">本词潜在 '+wordPtt(d,r).toFixed(2)+' · 熟练度 '+proficiencyPct(r)+'%'+(pen>0.005?' · 惩罚 −'+pen.toFixed(2):'')+(r.streak?' · 连对 '+r.streak:'')+damp+'</div>':'');
   var head;
-  if(ok)head=firstMeet?'✓ 已认识，稍后会再考你一次确认。':(typed?'✓ 拼写正确，记忆阶段已上升。':'✓ 选择正确，记忆阶段已上升。');
+  if(ok)head=usedHint?'△ 用过提示，本题记为 far，本词记忆率已减半。':(firstMeet?'✓ 已认识，稍后会再考你一次确认。':(typed?'✓ 拼写正确，记忆阶段已上升。':'✓ 选择正确，记忆阶段已上升。'));
   else if(verdict==='far')head='✗ 就差一点！正确写法：<strong>'+escapeHtml(d.w)+'</strong>';
   else head=force?'✗ 已标记为完全忘记。':(firstMeet?'✗ 先记住它，稍后会再考你一次。':'✗ 正确答案：<strong>'+escapeHtml(d.w)+'</strong>');
   fb.innerHTML=head+pttNote;
@@ -940,8 +958,14 @@ function markDay(ok){
   if(!d.done&&dailyProgress()>=0.8){d.done=true;updateStreak();toast('每日任务已达标（≥80%），今日签到成功')}
 }
 function updateStreak(){var t=today(),s=state.streak;if(s.last===t)return;if(s.last&&addDays(s.last,1)===t)s.count++;else s.count=1;s.last=t}
-/* 一轮结算分级：全对 → pure(Pure Memory)；正确率 ≥70% → complete(Track Complete)；否则 lost(Track Lost) */
-function roundTier(cards,correct){if(!cards)return 'lost';if(correct>=cards)return 'pure';return Math.round(correct/cards*100)>=70?'complete':'lost'}
+/* 一轮结算分级：全对 pure(紫) / 零 lost 但非全对 full(蓝紫之间的 Full Recall) / ≥70% complete(蓝) / 其余 lost(红) */
+function roundTier(cards,correct,far){
+  if(!cards)return 'lost';
+  far=far||0;
+  var lost=cards-correct-far;
+  if(lost===0)return far===0?'pure':'full';
+  return Math.round(correct/cards*100)>=70?'complete':'lost';
+}
 function finish(){
   var cards=session?session.cards:0,cor=session?session.correct:0;
   var uniqN=session?(session.uniqN||0):0;
@@ -950,9 +974,11 @@ function finish(){
   var c=$('study-card');if(!c)return;
   var signed=state.days[today()]&&state.days[today()].done;
   var acc=cards?Math.round(cor/cards*100):0;
-  var tier=roundTier(cards,cor);
-  var title=tier==='pure'?'Pure Memory':tier==='complete'?'Track Complete':'Track Lost';
-  var sub=tier==='pure'?'全程零失误，这一轮完美掌握。':tier==='complete'?'状态在线，保持这个节奏。':'别灰心，错题会重新排进复习。';
+  var tier=roundTier(cards,cor,vF);
+  var title=tier==='pure'?'Pure Memory':tier==='full'?'Full Recall':tier==='complete'?'Track Complete':'Track Lost';
+  var sub=tier==='pure'?'全程零失误，这一轮完美掌握。'
+    :tier==='full'?'没有完全遗忘，只是有几处还差一点（或用了提示）。再走一轮就能全对。'
+    :tier==='complete'?'状态在线，保持这个节奏。':'别灰心，错题会重新排进复习。';
   c.innerHTML='<div class="settle '+tier+'">'+
    '<div class="settle-eyebrow">ROUND RESULT</div>'+
    '<div class="settle-title">'+title+'</div>'+
