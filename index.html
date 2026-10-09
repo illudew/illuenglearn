@@ -561,8 +561,11 @@ function pttStats(){
   b10.forEach(function(c){s10+=c.potential||0});
   var ptt=(s10*2+s50)/60;
   if(!isFinite(ptt)||ptt<0)ptt=0;
+  /* r10：回忆模式最近 10 次的谱面潜力总和 */
+  var rec=(state.recall||[]).slice(-10),r10=0;
+  rec.forEach(function(x){r10+=+x.potential||0});
   if(arr.length)recordPtt(ptt);
-  return {ptt:ptt,b10:s10,b50:s50,count:arr.length,b10n:b10.length,b50n:b50.length,top:b50.slice(0,8)};
+  return {ptt:ptt,b10:s10,b50:s50,count:arr.length,b10n:b10.length,b50n:b50.length,r10:r10,r10n:rec.length,top:b50.slice(0,8)};
 }
 function refreshPTT(){
   var s=pttStats();
@@ -1321,7 +1324,7 @@ function finish(){
    '<div class="settle-sub">'+sub+'</div>'+
    '<div class="settle-score"><b>'+(failed?'0':score.toLocaleString())+'</b><span class="grade '+gradeClass(grade)+'">'+(failed?'—':grade)+'</span></div>'+
    '<div class="settle-stats"><div><b class="small cat-'+escapeHtml(band)+'">'+escapeHtml(band+' '+mark)+'</b><span>'+(where?escapeHtml(where):'评级')+'</span></div><div><b>'+total+'</b><span>单词</span></div><div><b>'+acc+'%</b><span>正确率</span></div></div>'+
-   '<div class="settle-meta"><span><b>'+maxCombo+'</b>MAX COMBO</span><span><b>'+vBig+'</b>大 P（≤5s）</span><span><b>'+vLate+'</b>记为 Late</span><span><b>'+potential.toFixed(2)+'</b>谱面潜力</span></div>'+
+   '<div class="settle-meta"><span><b>'+maxCombo+'</b>MAX COMBO</span><span><b>'+vLate+'</b>记为 Late</span><span><b>'+potential.toFixed(2)+'</b>谱面潜力</span></div>'+
    '<div class="settle-verdicts"><span class="vs pure">pure<b>'+vP+'</b></span><span class="vs far">far<b>'+vF+'</b></span><span class="vs lost">lost<b>'+vL+'</b></span></div>'+
    '<div class="settle-note">评级：P = Pure Memory（全对）· F = Full Recall（零 lost）· C = Track Complete（有 lost 但通关）· L = Track Lost（'+(failed?'血条耗尽':'正确率不足')+'）。</div>'+
    '<div class="actions"><button class="btn ghost" id="reviewBtn" type="button">回看本轮单词</button><button class="btn ghost" id="backBtn" type="button">返回列表</button><button class="btn primary" id="statsBtn" type="button">查看统计</button></div>'+
@@ -1436,7 +1439,7 @@ function renderStats(){
    '<div class="section-head"><div><div class="eyebrow">MEMORY PROFILE</div><h1 class="page-title">统计</h1></div><div class="tiny">12 类考试词库 · 每个 List 含 PST / PRS / FTR（末 List 含 BYD）</div></div>'+
    '<div class="grid2">'+
    '<div class="stat"><div class="k">PTT</div><div class="v">'+ptt.ptt.toFixed(4)+'</div></div>'+
-   '<div class="stat"><div class="k">b10 之和</div><div class="v">'+ptt.b10.toFixed(2)+'<small>×2 权重</small></div></div>'+
+   '<div class="stat"><div class="k">r10</div><div class="v">'+ptt.r10.toFixed(2)+'<small>回忆近 '+ptt.r10n+' 次</small></div></div>'+
    '<div class="stat"><div class="k">b50 之和</div><div class="v">'+ptt.b50.toFixed(2)+'<small>'+ptt.b50n+' 个谱面</small></div></div>'+
    '<div class="stat"><div class="k">谱面记录</div><div class="v">'+ptt.count.toLocaleString()+'<small>个</small></div></div>'+
    '<div class="stat"><div class="k">平均熟练度</div><div class="v">'+avgProf+'<small>%</small></div></div>'+
@@ -1444,7 +1447,7 @@ function renderStats(){
    '<div class="stat"><div class="k">已进入记忆库</div><div class="v">'+learned.toLocaleString()+'<small>词</small></div></div>'+
    '<div class="stat"><div class="k">总正确率</div><div class="v">'+accuracy()+'<small>%</small></div></div>'+
    '<div class="stat"><div class="k">待复习</div><div class="v">'+due.toLocaleString()+'<small>词</small></div></div></div>'+
-   '<div class="panel"><div class="panel-title">单谱面潜力值 PTT</div><div class="tiny">每个 List 的每个难度入口都是一个「谱面」。本轮潜力：Pure Memory（10,000,000）＝难度 + 2.0；EX（9,800,000~9,999,999）＝(难度 + 1.0) + (分数 − 9,800,000)/200,000；≤ 9,800,000＝难度 + (分数 − 9,500,000)/300,000。<br><b>总 PTT = ( b10 之和 × 2 + b50 之和 ) / 60</b>，b10 为潜力最高的 10 个不同谱面、b50 为最高的 50 个（<b>专有名词</b>不计入）。已记录 '+ptt.count.toLocaleString()+' 个谱面。</div></div>'+
+   '<div class="panel"><div class="panel-title">单谱面潜力值 PTT</div><div class="tiny">每个 List 的每个难度入口都是一个「谱面」。本轮潜力：Pure Memory（10,000,000）＝难度 + 2.0；EX（9,800,000~9,999,999）＝(难度 + 1.0) + (分数 − 9,800,000)/200,000；≤ 9,800,000＝难度 + (分数 − 9,500,000)/300,000。<br><b>总 PTT = ( 最高 10 个谱面之和 × 2 + 最高 50 个谱面之和 ) / 60</b>，专有名词不计入。<br><b>r10</b>＝回忆模式最近 10 次的谱面潜力总和（当前回忆近 '+ptt.r10n+' 次）。已记录 '+ptt.count.toLocaleString()+' 个谱面。</div></div>'+
    '<div class="panel"><div class="panel-title">最佳谱面（b50 前 8）</div>'+topHtml+'</div>'+
    '<div class="panel"><div class="panel-title">PTT 曲线</div>'+pttChartHtml()+'</div>'+
    '<div class="panel"><div class="panel-title">掌握度预测</div>'+forecastHtml(ptt.ptt)+'</div>'+
