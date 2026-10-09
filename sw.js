@@ -1,5 +1,5 @@
 /* WORDS Service Worker —— 离线可用（词库全部内嵌，联网仅用于在线发音） */
-var CACHE = 'words-v6-10';
+var CACHE = 'words-v6-11';
 var ASSETS = [
   './',
   './index.html',
