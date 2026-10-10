@@ -382,13 +382,22 @@ var MAP={};WORDS.forEach(function(d){MAP[d.w]=d});
 var CATS=(window.EXAM_LISTS||[]).map(function(c){
   return {k:c.k,n:c.n,band:c.band||'PST',nodiff:!!c.nodiff,count:c.lists.reduce(function(s,l){return s+(l.w||[]).length},0),lists:c.lists.slice()};
 });
-var CAT_OF={},LIST_OF={},LIST_BY_KEY={},BAND_WORDS={};
+var CAT_OF={},LIST_OF={},LIST_BY_KEY={},BAND_WORDS={PST:[],PRS:[],FTR:[],BYD:[],ALL:[]};
+// 回忆模式 band 按单词自身 baseLv 难度严格切分，确保四档难度明显区分
+(function(){
+  WORDS.forEach(function(d){
+    var lv=d.baseLv||5;
+    if(lv>=1&&lv<=4)BAND_WORDS.PST.push(d.w);
+    if(lv>=3&&lv<=6)BAND_WORDS.PRS.push(d.w);
+    if(lv>=6&&lv<=9)BAND_WORDS.FTR.push(d.w);
+    if(lv>=9&&lv<=12)BAND_WORDS.BYD.push(d.w);
+    BAND_WORDS.ALL.push(d.w);
+  });
+})();
 CATS.forEach(function(c){
   c.lists.forEach(function(l,idx){
     var key=c.k+':'+idx;
     LIST_BY_KEY[key]={catKey:c.k,catName:c.n,band:c.band,nodiff:!!c.nodiff,idx:idx,diff:(l.v!=null?l.v:null),words:l.w||[],key:key};
-    (BAND_WORDS[c.band]=BAND_WORDS[c.band]||[]).push.apply(BAND_WORDS[c.band],l.w||[]);
-    (BAND_WORDS['ALL']=BAND_WORDS['ALL']||[]).push.apply(BAND_WORDS['ALL'],l.w||[]);
     (l.w||[]).forEach(function(w){CAT_OF[w]=c.k;LIST_OF[w]=key});
   });
 });
