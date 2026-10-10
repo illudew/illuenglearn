@@ -297,6 +297,11 @@ button{cursor:pointer}
 .bandtag{font-size:10.5px;font-weight:800;letter-spacing:.5px}
 .hard-toggle{display:flex;align-items:center;gap:9px;font-size:12.5px;color:#b9c4d4;margin:8px 0 12px;cursor:pointer}
 .hard-toggle input{width:16px;height:16px}
+.list-toolbar{display:flex;align-items:center;gap:18px;margin:4px 0 12px;flex-wrap:wrap}
+.list-toolbar .lt-group{display:flex;align-items:center;gap:10px}
+.list-toolbar .lt-label{font-size:12px;color:#7f8ba1;letter-spacing:1px}
+.list-toolbar .rec-grid{margin:0;grid-template-columns:repeat(6,auto);gap:6px}
+.list-toolbar .rec-grid button{padding:7px 12px;font-size:12px;border-radius:9px}
 .hp-wrap{margin:2px 0 12px}
 .hp-bar{height:9px;border-radius:6px;background:#2a1620;overflow:hidden;border:1px solid #40202c}
 .hp-bar i{display:block;height:100%;background:linear-gradient(90deg,#ff6b6b,#ff9f5b);transition:width .25s}
@@ -711,7 +716,7 @@ function pushAhead(q,item,gap){
 }
 
 /* ---------- session ---------- */
-var lastCtx=null,curCatKey=null,recallSel={band:'PST',count:20,hard:false,mode:'auto'};
+var lastCtx=null,curCatKey=null,recallSel={band:'PST',count:20,hard:false,mode:'auto'},listSel={mode:'auto'};
 function beginSession(q,msg,ctx){
   session={queue:q,total:q.length,correct:0,wrong:0,cards:0,lastAutoMode:null,autoBag:null,single:true,
     vPure:0,vFar:0,vBig:0,vLate:0,vLost:0,uniq:{},uniqN:0,combo:0,maxCombo:0,log:[],ctx:ctx||{type:'list'}};
@@ -725,16 +730,17 @@ function clearSessionIfAny(msg){
   return true;
 }
 /* 从某个 list 的某个难度入口开始（可选困难模式） */
-function startList(catKey,idx,hard){
+function startList(catKey,idx,hard,mode){
   var L=LIST_BY_KEY[listKey(catKey,idx)];if(!L){toast('list 不存在');return}
   var v=diffVal(L.key);
   var band=L.band;
   var words=L.words||[];
+  mode=mode||listSel.mode||'auto';
   if(!words.length){toast('该难度暂无单词');return}
   if(!clearSessionIfAny('当前学习还没完成，重新开始？'))return;
   var q=words.map(function(w){var r=state.words[w];return {w:w,kind:(r&&r.seen>0?'review':'new')}});
-  beginSession(q,'开始：'+L.catName+' · Lv.'+(L.lv!=null?L.lv:'?')+(hard?' · 困难模式':''),
-    {type:'list',catKey:catKey,catName:L.catName,idx:idx,key:L.key,ckey:chartKey(L.key),band:band,v:(v==null?null:v),nodiff:!!L.nodiff,hard:!!hard,mode:'auto'});
+  beginSession(q,'开始：'+L.catName+' · Lv.'+(L.lv!=null?L.lv:'?')+(hard?' · 困难模式':'')+(mode&&mode!=='auto'?' · '+modeLabel(mode).split(' · ')[0]:''),
+    {type:'list',catKey:catKey,catName:L.catName,idx:idx,key:L.key,ckey:chartKey(L.key),band:band,v:(v==null?null:v),nodiff:!!L.nodiff,hard:!!hard,mode:mode});
 }
 /* 回忆模式：自选难度档、单词数与题型；记录只保留最近 10 次 */
 function startRecall(band,count,hard,mode){
@@ -896,12 +902,15 @@ function renderLists(){
     return '<button class="chart-btn list-btn" data-idx="'+i+'" type="button"><span class="cb-head"><span class="cb-list">List '+(i+1)+'</span>'+(vLabel?'<span class="cb-t cat-'+c.band+'">'+vLabel+'</span>':'')+'</span>'+res+'<span class="cb-n">'+(l.w||[]).length+' 词</span>'+best+'</button>';
   }).join('');
   el.innerHTML='<div class="crumb"><button class="back" id="listsBack" type="button">← 词库</button><span class="crumb-t">'+escapeHtml(c.n)+' <span class="bandtag cat-'+c.band+'">'+c.band+'</span></span><span class="crumb-s">'+c.count+' 词 · '+c.lists.length+' 个 List</span></div>'+
-   '<label class="hard-toggle"><input type="checkbox" id="hardToggle" '+(htState?'checked':'')+'> 困难模式</label>'+
+   '<div class="list-toolbar"><div class="lt-group"><span class="lt-label">题型</span><div class="rec-grid" id="listMode">'+
+     rcModes().map(function(m){return '<button type="button" data-mode="'+m.k+'" class="'+(listSel.mode===m.k?'on':'')+'">'+m.n+'</button>'}).join('')+
+   '</div></div><label class="hard-toggle"><input type="checkbox" id="hardToggle" '+(htState?'checked':'')+'> 困难模式</label></div>'+
    '<div class="list-grid list-grid-lv">'+rows+'</div>';
   $('listsBack').onclick=function(){showView('cats')};
+  $('listMode').querySelectorAll('[data-mode]').forEach(function(b){b.onclick=function(){listSel.mode=b.dataset.mode;renderLists()}});
   var ht=$('hardToggle');
   ht.onchange=function(){state.settings.hard=ht.checked;save()};
-  el.querySelectorAll('[data-idx]').forEach(function(b){b.onclick=function(){startList(c.k,+b.dataset.idx,ht.checked)}});
+  el.querySelectorAll('[data-idx]').forEach(function(b){b.onclick=function(){startList(c.k,+b.dataset.idx,ht.checked,listSel.mode)}});
 }
 var RC_MODES=[{k:'auto',n:'混合'},{k:'en2zh',n:'英译汉'},{k:'zh2en',n:'汉译英'},{k:'spell',n:'拼写'},{k:'listen',n:'听写'},{k:'clozeFill',n:'填空'}];
 /* 静音模式下不提供听写题型 */
@@ -1407,8 +1416,28 @@ function roundScore(cards,vP,vF,bigP){
   if(!cards)return 0;
   return Math.round(1e7/cards*((vP||0)+(vF||0)/2)+(bigP||0));
 }
-function scoreGrade(s){return s>=9900000?'EX+':s>=9800000?'EX':s>=9500000?'AA':s>=9200000?'A':s>=8900000?'B':s>=8600000?'C':'D'}
-function gradeClass(g){return g==='EX+'?'gEXplus':'g'+g}
+function scoreGrade(s){
+  if(s<6000000)return 'F';
+  if(s<6300000)return 'D';
+  if(s<6600000)return 'D+';
+  if(s<6900000)return 'C-';
+  if(s<7200000)return 'C';
+  if(s<7500000)return 'C+';
+  if(s<7800000)return 'B-';
+  if(s<8100000)return 'B';
+  if(s<8500000)return 'B+';
+  if(s<9000000)return 'A-';
+  if(s<9500000)return 'A';
+  if(s<9800000)return 'AA';
+  if(s<9900000)return 'EX';
+  return 'EX+';
+}
+/* 档位 → CSS 类：A-/B-/B+/C-/C+/D+ 复用主字母配色；EX+ 有专属色 */
+function gradeClass(g){
+  if(g==='EX+')return 'gEXplus';
+  if(g==='F')return 'gD';
+  var m=g.match(/^([A-Z])/);return m?'g'+m[1]:'gD';
+}
 var lastRound=null;
 function finish(){
   var ctx=(session&&session.ctx)||lastCtx||{};
@@ -1446,13 +1475,14 @@ function finish(){
   var bestScore=(ctx.ckey&&state.charts[ctx.ckey])?Number(state.charts[ctx.ckey].score||0):score;
   var bestLine=ctx.type==='list'?'<div class="settle-best">最高成绩 '+bestScore.toLocaleString()+'</div>':'';
   var hardBadge=(ctx.hard&&!failed)?'<span class="settle-hard">困难</span>':'';
+  var modeLabelShort=(ctx.mode&&ctx.mode!=='auto')?modeLabel(ctx.mode).split(' · ')[0]:'混合';
   var where=ctx.type==='recall'?('回忆 '+band):(ctx.catName?ctx.catName+' · List '+((ctx.idx||0)+1):'');
   c.innerHTML='<div class="settle '+tier+'">'+
    '<div class="settle-eyebrow">ROUND RESULT</div>'+
    '<div class="settle-title">'+title+hardBadge+'</div>'+
    '<div class="settle-score"><b>'+(failed?'0':score.toLocaleString())+'</b><span class="grade '+gradeClass(grade)+'">'+(failed?'—':grade)+'</span></div>'+
    '<div class="settle-stats"><div><b class="small cat-'+escapeHtml(band)+'">'+escapeHtml(band+' '+mark)+'</b><span>'+(where?escapeHtml(where):'评级')+'</span></div><div><b>'+total+'</b><span>单词</span></div><div><b>'+acc+'%</b><span>正确率</span></div></div>'+
-   '<div class="settle-meta"><span><b>'+maxCombo+'</b>MAX COMBO</span><span><b>'+vLate+'</b>记为 Late</span><span><b>'+potential.toFixed(2)+'</b>谱面潜力</span></div>'+
+   '<div class="settle-meta"><span><b>'+maxCombo+'</b>MAX COMBO</span><span><b>'+vLate+'</b>记为 Late</span><span><b>'+potential.toFixed(2)+'</b>谱面潜力</span><span><b>'+escapeHtml(modeLabelShort)+'</b>题型</span></div>'+
    bestLine+
    '<div class="settle-verdicts"><span class="vs pure">pure<b>'+vP+'</b></span><span class="vs far">far<b>'+vF+'</b></span><span class="vs lost">lost<b>'+vL+'</b></span></div>'+
    '<div class="actions"><button class="btn ghost" id="reviewBtn" type="button">回看本轮单词</button><button class="btn ghost" id="backBtn" type="button">返回列表</button><button class="btn primary" id="statsBtn" type="button">查看统计</button></div>'+
