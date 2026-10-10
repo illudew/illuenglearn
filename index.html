@@ -1131,7 +1131,9 @@ function hint(){
 /* ---------- 选择题：索引与选项 ---------- */
 function bigrams(s){var set={},n=0;for(var i=0;i<s.length-1;i++){var g=s.slice(i,i+2);if(!set[g]){set[g]=1;n++}}return {set:set,n:n}}
 function diceCoeff(a,b){if(!a||!b)return 0;if(a===b)return 1;if(a.length<2||b.length<2)return 0;var A=bigrams(a),B=bigrams(b),inter=0;for(var g in A.set){if(B.set[g])inter++}return 2*inter/(A.n+B.n)}
-function buildIndex(){BYLV={};BYINIT={};WORDS.forEach(function(d){(BYLV[d.baseLv]=BYLV[d.baseLv]||[]).push(d);var k=(d.w[0]||'').toLowerCase();(BYINIT[k]=BYINIT[k]||[]).push(d)})}
+function buildIndex(){BYLV={};BYINIT={};BYBAND={PST:[],PRS:[],FTR:[],BYD:[]};WORDS.forEach(function(d){(BYLV[d.baseLv]=BYLV[d.baseLv]||[]).push(d);var k=(d.w[0]||'').toLowerCase();(BYINIT[k]=BYINIT[k]||[]).push(d);(BYBAND[bandOf(d.baseLv)]||[]).push(d)})}
+/* 难度档位（PST/PRS/FTR/BYD）：与 diffCat 保持一致 */
+function bandOf(lv){lv=+lv||1;return lv<=3?'PST':lv<=6?'PRS':lv<=10?'FTR':'BYD'}
 /* 形近词：同首字母、长度接近、字符二元组相似度达到阈值的词 */
 function similarEn(word,k,minScore){
   minScore=minScore==null?0.3:minScore;
@@ -1236,39 +1238,92 @@ function troubleWords(d){
 function buildOptions(d,md){
   md=md||state.settings.mode;var opts=[d],used={},need=(md==='en2zh'?2:3),i;
   used[d.w]=1;
-  function push(c,posDiff){ /* 词形相近可以，意思不能相同，避免出现两个正确答案；en2zh 优先不同词性 */
+  /* ---------- en2zh：按难度分档打分选干扰项 ---------- */
+  if(md==='en2zh'){
+    var lv=+d.baseLv||5,band=bandOf(lv);
+    var low=lv<=3,mid=lv>=4&&lv<=6,high=lv>=7;
+    /* 先从 session ctx 里拿本轮已出现过的词 Set（同一张卡不重复，也不跨卡重复） */
+    var seen=(session&&session.ctx&&session.ctx.__seenEn2zh)||(session.ctx.__seenEn2zh=new Set());
+    seen.add(d.w);
+    /* 候选池：同 band 全部 + 相邻 baseLv 各 ±1 + 形近 + 同词根 + 个人错题
+       （同 band 是真实考试里会一起出现的干扰词，权重最高） */
+    var pool=[],bandPool=BYBAND[band]||[],lvPool=[],trouble=troubleWords(d),sim=similarEn(d.w,30,0.25),root=[];
+    (BYINIT[(d.w[0]||'').toLowerCase()]||[]).forEach(function(x){if(x.w!==d.w&&sameRoot(d.w,x.w))root.push(x)});
+    BYLV[lv]&&BYLV[lv].forEach(function(x){lvPool.push(x)});
+    BYLV[lv-1]&&BYLV[lv-1].forEach(function(x){lvPool.push(x)});
+    BYLV[lv+1]&&BYLV[lv+1].forEach(function(x){lvPool.push(x)});
+    [bandPool,lvPool,sim,root,trouble].forEach(function(a){a.forEach(function(x){if(x.w!==d.w&&!used[x.w]&&!pool.includes(x))pool.push(x)})});
+    /* 不够时拿全部 WORDS 兜底 */
+    if(pool.length<80){WORDS.forEach(function(x){if(x.w!==d.w&&!used[x.w]&&!pool.includes(x))pool.push(x)})}
+
+    /* 给每个候选打分：越高越"好干扰项" */
+    var scored=[];
+    pool.forEach(function(c){
+      if(used[c.w]||sameMeaning(d.zh,c.zh))return;   /* 彻底同意思的直接排除 */
+      var s=0;
+      var cBand=bandOf(c.baseLv);
+      var lvGap=Math.abs(+c.baseLv-lv);
+      /* 来源分：同 band 最高（真实考试的干扰） */
+      if(cBand===band)s+=3;
+      else if(lvGap<=2)s+=1;
+      /* 难度差太大的减分 */
+      if(lvGap>3)s-=2;
+      /* 词性：低难度强制不同词性（新手友好），中高难度同词性更易混 */
+      if(low){s+=(c.pos!==d.pos?3:-3)}
+      else if(mid){s+=(c.pos!==d.pos?0.5:1.5)}
+      else{s+=(c.pos!==d.pos?0:1.5)}
+      /* 易混特征：中高难度启用 */
+      if(!low){
+        if(sameMeaning(d.zh,c.zh))s+=2;            /* 共享中文义项，最狠的易混 */
+        if(sim.indexOf(c)>=0)s+=1;                  /* 形近 */
+        if(root.indexOf(c)>=0)s+=1;                 /* 同词根 */
+      }
+      if(trouble.indexOf(c)>=0)s+=2;               /* 个人错题历史 */
+      /* session 内去重：已在本轮任何 en2zh 卡出现过（作为正确项或干扰项）都大幅降分，
+         避免一整堂课反复薅同一批干扰词 */
+      if(seen.has(c.w))s-=3;
+      /* 微扰动（0..0.5），避免同分顺序每次都一样 */
+      s+=Math.random()*0.5;
+      scored.push({d:c,s:s});
+    });
+    scored.sort(function(a,b){return b.s-a.s});
+    /* 取 top need 个（如果分差 < 0.8 就混进次优，加一点随机性） */
+    var picked=[],top=[];
+    for(var si=0;si<scored.length&&picked.length<need;si++){
+      var x=scored[si];
+      if(!picked.length||x.s-picked[0].s<0.8||Math.random()<0.6){
+        picked.push(x.d);seen.add(x.d.w);used[x.d.w]=1;opts.push(x.d);
+      }
+    }
+    /* 不够继续补 */
+    for(var sj=0;sj<scored.length&&picked.length<need;sj++){
+      var y=scored[sj];if(used[y.d.w])continue;
+      picked.push(y.d);seen.add(y.d.w);used[y.d.w]=1;opts.push(y.d);
+    }
+    opts=shuffle(opts);
+    return opts.map(function(x){return {w:x.w,zh:x.zh,text:shortMeaning(x.zh,x.pos,x.core)}});
+  }
+  /* ---------- zh2en：保留原逻辑（同词根→形近→错题→同难度同词性优先） ---------- */
+  function push(c){ /* 词形相近可以，意思不能相同，避免出现两个正确答案 */
     if(!c||used[c.w]||sameMeaning(d.zh,c.zh))return;
-    if(md==='en2zh'&&posDiff===false)return;   /* 强制不同词性的候选才进 */
     used[c.w]=1;opts.push(c);need--;
   }
-  /* 1) 英文选项题型：先补同词根词（易混） */
-  if(md==='zh2en'){
-    var root=wordRoot(d.w),rp=[];
-    (BYINIT[(d.w[0]||'').toLowerCase()]||[]).forEach(function(y){if(y.w!==d.w&&sameRoot(d.w,y.w))rp.push(y)});
-    rp=shuffle(rp);for(i=0;i<rp.length&&need>0;i++)push(rp[i]);
-  }
-  /* 2) 形近词（英文选项题型） */
-  if(md==='zh2en'){var sim=similarEn(d.w,24);for(i=0;i<sim.length&&need>0;i++)push(sim[i])}
-  /* 3) 个人错题（按错误历史定制） */
-  var tr=troubleWords(d);for(i=0;i<tr.length&&need>0;i++)push(tr[i],md==='en2zh'?tr[i].pos!==d.pos:null);
-  /* 4) 同难度词：
-       - zh2en: 同词性优先（易混）
-       - en2zh: 不同词性优先（避免仅靠词性就能排除），把同词性当兜底 */
-  if(md==='en2zh'){
-    var pool=shuffle(BYLV[d.baseLv]||WORDS);
-    pool.sort(function(a,b){return (a.pos!==d.pos?1:0)-(b.pos!==d.pos?1:0)});
-    for(i=0;i<pool.length&&need>0;i++)push(pool[i],true);
-    /* 不够时放同行词性也无妨 */
-    for(i=0;i<pool.length&&need>0;i++)push(pool[i],null);
-  }else{
-    var poolZ=shuffle(BYLV[d.baseLv]||WORDS);
-    poolZ.sort(function(a,b){return (b.pos===d.pos?1:0)-(a.pos===d.pos?1:0)});
-    for(i=0;i<poolZ.length&&need>0;i++)push(poolZ[i]);
-  }
+  /* 1) 同词根词（易混） */
+  var root=wordRoot(d.w),rp=[];
+  (BYINIT[(d.w[0]||'').toLowerCase()]||[]).forEach(function(y){if(y.w!==d.w&&sameRoot(d.w,y.w))rp.push(y)});
+  rp=shuffle(rp);for(i=0;i<rp.length&&need>0;i++)push(rp[i]);
+  /* 2) 形近词 */
+  var sim=similarEn(d.w,24);for(i=0;i<sim.length&&need>0;i++)push(sim[i]);
+  /* 3) 个人错题 */
+  var tr=troubleWords(d);for(i=0;i<tr.length&&need>0;i++)push(tr[i]);
+  /* 4) 同难度词：同词性优先 */
+  var poolZ=shuffle(BYLV[d.baseLv]||WORDS);
+  poolZ.sort(function(a,b){return (b.pos===d.pos?1:0)-(a.pos===d.pos?1:0)});
+  for(i=0;i<poolZ.length&&need>0;i++)push(poolZ[i]);
   /* 5) 兜底 */
   if(need>0){var any=shuffle(WORDS);for(i=0;i<any.length&&need>0;i++){var y=any[i];if(used[y.w])continue;used[y.w]=1;opts.push(y);need--}}
   opts=shuffle(opts);
-  return opts.map(function(x){return {w:x.w,zh:x.zh,text:(md==='en2zh'?shortMeaning(x.zh,x.pos,x.core):x.w)}});
+  return opts.map(function(x){return {w:x.w,zh:x.zh,text:x.w}});
 }
 function submit(force,chosenW){
   if(!session||!session.queue.length||phase!=='question')return;
