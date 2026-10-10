@@ -453,7 +453,7 @@ function gradeFromTier(t){return t==='pure'?'P':t==='full'?'F':t==='complete'?'C
 function tierClass(g){return 'g'+g}
 
 /* ---------- state ---------- */
-var state=load(),session=null,phase='question',qStart=0,renderSeq=0,dictCache={},curOptions=[],BYLV={},BYINIT={},hintUsed=false;
+var state=load(),session=null,phase='question',qStart=0,renderSeq=0,dictCache={},curOptions=[],BYLV={},BYINIT={},BYBAND={PST:[],PRS:[],FTR:[],BYD:[]},hintUsed=false;
 
 /* ---------- helpers ---------- */
 function clamp(v,a,b){a=a==null?1:a;b=b==null?PROP_LV:b;return Math.max(a,Math.min(b,v))}
@@ -1203,7 +1203,7 @@ function shortMeaning(zh,pos,core){
       }
     }
   }else{
-    meaningTokens(strip(zh)).forEach(function(tk){if(tk.length<=10&&!/……|…|\.\.\./.test(tk)/)pool.push(tk)});
+    meaningTokens(strip(zh)).forEach(function(tk){if(tk.length<=10&&!/……|…|\.\.\./.test(tk))pool.push(tk)});
   }
   var seen={};seen[first]=1;
   var extra=[];
