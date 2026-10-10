@@ -738,7 +738,7 @@ function startList(catKey,idx,hard,mode){
   mode=mode||listSel.mode||'auto';
   if(!words.length){toast('该难度暂无单词');return}
   if(!clearSessionIfAny('当前学习还没完成，重新开始？'))return;
-  var q=words.map(function(w){var r=state.words[w];return {w:w,kind:(r&&r.seen>0?'review':'new')}});
+  var q=shuffle(words.map(function(w){var r=state.words[w];return {w:w,kind:(r&&r.seen>0?'review':'new')}}));
   beginSession(q,'开始：'+L.catName+' · Lv.'+(L.lv!=null?L.lv:'?')+(hard?' · 困难模式':'')+(mode&&mode!=='auto'?' · '+modeLabel(mode).split(' · ')[0]:''),
     {type:'list',catKey:catKey,catName:L.catName,idx:idx,key:L.key,ckey:chartKey(L.key),band:band,v:(v==null?null:v),nodiff:!!L.nodiff,hard:!!hard,mode:mode});
 }
@@ -1941,9 +1941,25 @@ document.addEventListener('keydown',function(e){
     if(phase==='question'&&isTypedMode()){e.preventDefault();submitTyped();return}
     return
   }
-  if(phase==='question'&&session&&session.queue.length){
+  if(!session||!session.queue.length)return;
+  if(phase==='question'){
     var n=parseInt(e.key,10);
-    if(n>=1&&n<=4){var b=document.querySelector('#options .opt[data-i="'+n+'"]');if(b&&!b.disabled)b.click()}
+    if(n>=1&&n<=4){var b=document.querySelector('#options .opt[data-i="'+n+'"]');if(b&&!b.disabled){e.preventDefault();b.click()}return}
+  }
+  /* 快捷键：H=提示（question 阶段生效），Space=播放发音，N=下一题（feedback 阶段替代 Enter） */
+  if((e.key==='h'||e.key==='H')){
+    e.preventDefault();
+    if(phase==='question')hint();
+    return;
+  }
+  if(e.key===' '){
+    e.preventDefault();
+    var d=currentData();if(d)speak(d.w);
+    return;
+  }
+  if((e.key==='n'||e.key==='N')&&phase==='feedback'){
+    e.preventDefault();next();
+    return;
   }
 });
 
