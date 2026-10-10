@@ -283,7 +283,8 @@ button{cursor:pointer}
 .li-charts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .chart-btn{display:flex;flex-direction:column;gap:3px;padding:9px 10px;border-radius:11px;border:1px solid #2b3340;background:#0f131a;color:#eef2f7;cursor:pointer;text-align:left;transition:.15s}
 .chart-btn:hover{border-color:#3a68c8;background:#171f2c}
-.chart-btn .cb-head{display:flex;justify-content:space-between;align-items:baseline}
+.chart-btn .cb-head{display:flex;gap:6px;align-items:baseline}
+.chart-btn .cb-list{font-size:11px;font-weight:800;color:#eef2f7;background:#242a34;padding:1px 6px;border-radius:5px;letter-spacing:.3px}
 .chart-btn .cb-t{font-size:10.5px;font-weight:800;letter-spacing:.5px}
 .chart-btn .cb-v{font-size:15px;font-weight:800;color:#eef2f7}
 .chart-btn .chart-res{font-size:10.5px;color:#9fb0c6;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
@@ -781,8 +782,8 @@ function renderLists(){
     var v=l.v;
     var res=r?('<span class="chart-res"><b class="'+tierClass(gradeFromTier(r.tier))+'">'+gradeFromTier(r.tier)+'</b><b>'+Number(r.score||0).toLocaleString()+'</b>'+(r.hard?'<i>困难</i>':'')+'</span>'):'<span class="chart-res dim">未完成</span>';
     var best=r&&r.score?('<span class="chart-best">最高 '+Number(r.score).toLocaleString()+'</span>'):'';
-    var vLabel=c.nodiff?'—':dispDiff(v);
-    return '<button class="chart-btn list-btn" data-idx="'+i+'" type="button"><span class="cb-head"><span class="cb-t cat-'+c.band+'">'+vLabel+'</span></span>'+res+'<span class="cb-n">'+(l.w||[]).length+' 词</span>'+best+'</button>';
+    var vLabel=c.nodiff?'':dispDiff(v);
+    return '<button class="chart-btn list-btn" data-idx="'+i+'" type="button"><span class="cb-head"><span class="cb-list">List '+(i+1)+'</span>'+(vLabel?'<span class="cb-t cat-'+c.band+'">'+vLabel+'</span>':'')+'</span>'+res+'<span class="cb-n">'+(l.w||[]).length+' 词</span>'+best+'</button>';
   }).join('');
   el.innerHTML='<div class="crumb"><button class="back" id="listsBack" type="button">← 词库</button><span class="crumb-t">'+escapeHtml(c.n)+' <span class="bandtag cat-'+c.band+'">'+c.band+'</span></span><span class="crumb-s">'+c.count+' 词 · '+c.lists.length+' 个 List</span></div>'+
    '<label class="hard-toggle"><input type="checkbox" id="hardToggle" '+(htState?'checked':'')+'> 困难模式</label>'+
