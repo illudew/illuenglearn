@@ -1182,21 +1182,38 @@ function meaningGroups(zh){
   }).filter(function(g){return g.text.trim()});
 }
 function shortMeaning(zh,pos,core){
-  /* 词库已标注核心义项时直接采用，避免正则切分误选非核心义项 */
-  if(core)return core;
-  var groups=meaningGroups(zh);
-  if(!groups.length)return String(zh||'').slice(0,10);
-  /* 词库释义已按常用度排序，取第一组（最常用词性）即可，不再依赖可能与释义不符的 pos 字段 */
-  var pick=groups[0];
+  /* 优先用 core 当第一义项，再从完整释义里补 1–2 个同类常用义，凑成 2–3 个 */
   var strip=function(x){return String(x||'').replace(/[（(][^）)]*[）)]/g,'').replace(/[【\[][^】\]]*[】\]]/g,'').replace(/<[^>]{0,24}>/g,'')};
-  var t=meaningTokens(strip(pick.text)).map(function(x){return x.trim()}).filter(Boolean);
-  if(!t.length)t=meaningTokens(strip(zh));
-  /* 含「……」的模式化义项排到后面，优先展示实义 */
-  t=t.map(function(x,n){return {x:x,n:n,s:(/……|…|\.\.\./.test(x)?0:2)}})
-     .sort(function(a,b){return b.s-a.s||a.n-b.n}).map(function(o){return o.x});
-  /* 优先用简短的核心义项，避免选项里出现整段解释 */
-  var brief=t.filter(function(x){return x.length<=10});
-  return (brief.length>=2?brief:t).slice(0,2).join('、')||String(zh||'').slice(0,10);
+  var groups=meaningGroups(zh);
+  var firstCore=core?String(core).trim():'';
+  var first=firstCore||'';
+  var pool=[];
+  if(groups.length){
+    /* 取前两到三个常用词性组，每组抓一个简短、非模式化的义项 */
+    for(var gIdx=0;gIdx<Math.min(3,groups.length);gIdx++){
+      var tokens=meaningTokens(strip(groups[gIdx].text));
+      for(var tIdx=0;tIdx<tokens.length;tIdx++){
+        var tk=tokens[tIdx];
+        if(!tk||tk.length>10)continue;
+        if(/……|…|\.\.\./.test(tk))continue;
+        if(firstCore&&tk===firstCore)continue;   /* 跳过已经当第一义的 core */
+        pool.push(tk);break;
+      }
+    }
+  }else{
+    meaningTokens(strip(zh)).forEach(function(tk){if(tk.length<=10&&!/……|…|\.\.\./.test(tk)/)pool.push(tk)});
+  }
+  var seen={};seen[first]=1;
+  var extra=[];
+  for(var i=0;i<pool.length&&extra.length<2;i++){
+    if(!pool[i]||seen[pool[i]])continue;
+    extra.push(pool[i]);seen[pool[i]]=1;
+  }
+  if(!first&&!extra.length)return String(zh||'').slice(0,10);
+  var out=(first?[first]:[]).concat(extra).slice(0,3);
+  /* 如果只有 1 个，还是退回 core/单义本身（不强行补，避免把毫不相干的词义塞进选项） */
+  if(out.length===1)return out[0];
+  return out.join('、');
 }
 /* 生成 4 个选项：英译汉=精简中文释义；汉译英=英文单词。
    汉译英高难度优先用“词形相近但意思不相近”的词做干扰项（如 possess/propose/proper/proposal）。 */
@@ -1217,10 +1234,11 @@ function troubleWords(d){
   return out.slice(0,40).map(function(o){return o.x});
 }
 function buildOptions(d,md){
-  md=md||state.settings.mode;var opts=[d],used={},need=3,i;
+  md=md||state.settings.mode;var opts=[d],used={},need=(md==='en2zh'?2:3),i;
   used[d.w]=1;
-  function push(c){ /* 词形相近可以，意思不能相同，避免出现两个正确答案 */
+  function push(c,posDiff){ /* 词形相近可以，意思不能相同，避免出现两个正确答案；en2zh 优先不同词性 */
     if(!c||used[c.w]||sameMeaning(d.zh,c.zh))return;
+    if(md==='en2zh'&&posDiff===false)return;   /* 强制不同词性的候选才进 */
     used[c.w]=1;opts.push(c);need--;
   }
   /* 1) 英文选项题型：先补同词根词（易混） */
@@ -1232,11 +1250,21 @@ function buildOptions(d,md){
   /* 2) 形近词（英文选项题型） */
   if(md==='zh2en'){var sim=similarEn(d.w,24);for(i=0;i<sim.length&&need>0;i++)push(sim[i])}
   /* 3) 个人错题（按错误历史定制） */
-  var tr=troubleWords(d);for(i=0;i<tr.length&&need>0;i++)push(tr[i]);
-  /* 4) 同难度词（同词性优先） */
-  var pool=shuffle(BYLV[d.baseLv]||WORDS);
-  pool.sort(function(a,b){return (b.pos===d.pos?1:0)-(a.pos===d.pos?1:0)});
-  for(i=0;i<pool.length&&need>0;i++)push(pool[i]);
+  var tr=troubleWords(d);for(i=0;i<tr.length&&need>0;i++)push(tr[i],md==='en2zh'?tr[i].pos!==d.pos:null);
+  /* 4) 同难度词：
+       - zh2en: 同词性优先（易混）
+       - en2zh: 不同词性优先（避免仅靠词性就能排除），把同词性当兜底 */
+  if(md==='en2zh'){
+    var pool=shuffle(BYLV[d.baseLv]||WORDS);
+    pool.sort(function(a,b){return (a.pos!==d.pos?1:0)-(b.pos!==d.pos?1:0)});
+    for(i=0;i<pool.length&&need>0;i++)push(pool[i],true);
+    /* 不够时放同行词性也无妨 */
+    for(i=0;i<pool.length&&need>0;i++)push(pool[i],null);
+  }else{
+    var poolZ=shuffle(BYLV[d.baseLv]||WORDS);
+    poolZ.sort(function(a,b){return (b.pos===d.pos?1:0)-(a.pos===d.pos?1:0)});
+    for(i=0;i<poolZ.length&&need>0;i++)push(poolZ[i]);
+  }
   /* 5) 兜底 */
   if(need>0){var any=shuffle(WORDS);for(i=0;i<any.length&&need>0;i++){var y=any[i];if(used[y.w])continue;used[y.w]=1;opts.push(y);need--}}
   opts=shuffle(opts);
