@@ -319,7 +319,7 @@ button{cursor:pointer}
   <header class="topbar">
     <div class="brand">W<span>O</span>RDS</div>
     <div class="top-meta">
-      <div class="streak" id="pttEl" title="单谱面潜力值 PTT">PTT 0.0000</div>
+      <div class="streak" id="pttEl" title="单谱面潜力值 Potential">Potential 0.0000</div>
       <div class="streak" id="streakEl">0 天</div>
       <div class="sync-dot" id="dataStatus" title="本地词库已就绪"></div>
     </div>
@@ -574,8 +574,8 @@ function refreshPTT(){
   var s=pttStats();
   var e=$('pttEl');
   if(e){
-    e.textContent='PTT '+s.ptt.toFixed(4);
-    e.title='PTT = 最近 50 轮背单词谱面潜力的平均值（当前 '+s.rounds+' 轮）。';
+    e.textContent='Potential '+s.ptt.toFixed(4);
+    e.title='Potential = 最近 50 轮背单词谱面潜力的平均值（当前 '+s.rounds+' 轮）。';
   }
   return s;
 }
@@ -1397,7 +1397,7 @@ function forecastHtml(cur){
     var days=Math.ceil((target-cur)/rate);
     body='按此速度，预计 <b>'+days.toLocaleString()+' 天</b>后达到 <b>'+target.toFixed(4)+'</b>（约 '+addDays(today(),days)+'）。';
   }
-  return '<div class="tiny">当前 PTT <b>'+cur.toFixed(4)+'</b> · '+rateTxt+'<br>'+body+'</div>';
+  return '<div class="tiny">当前 Potential <b>'+cur.toFixed(4)+'</b> · '+rateTxt+'<br>'+body+'</div>';
 }
 function renderStats(){
   var learned=0;
@@ -1429,9 +1429,9 @@ function renderStats(){
   $('view-stats').innerHTML=
    '<div class="section-head"><div><div class="eyebrow">MEMORY PROFILE</div><h1 class="page-title">统计</h1></div></div>'+
    '<div class="grid2">'+
-   '<div class="stat"><div class="k">PTT</div><div class="v">'+ptt.ptt.toFixed(4)+'</div></div>'+
+   '<div class="stat"><div class="k">Potential</div><div class="v">'+ptt.ptt.toFixed(4)+'</div></div>'+
    '<div class="stat"><div class="k">r10</div><div class="v">'+ptt.r10.toFixed(2)+'<small>回忆近 '+ptt.r10n+' 次</small></div></div>'+
-   '<div class="stat"><div class="k">PTT 轮次</div><div class="v">'+ptt.rounds+'<small>近 50 轮</small></div></div>'+
+   '<div class="stat"><div class="k">Potential 轮次</div><div class="v">'+ptt.rounds+'<small>近 50 轮</small></div></div>'+
    '<div class="stat"><div class="k">谱面记录</div><div class="v">'+ptt.count.toLocaleString()+'<small>个</small></div></div>'+
    '<div class="stat"><div class="k">平均熟练度</div><div class="v">'+avgProf+'<small>%</small></div></div>'+
    '<div class="stat"><div class="k">连续打卡</div><div class="v">'+(state.streak.count||0)+'<small>天</small></div></div>'+
@@ -1439,7 +1439,7 @@ function renderStats(){
    '<div class="stat"><div class="k">总正确率</div><div class="v">'+accuracy()+'<small>%</small></div></div>'+
    '<div class="stat"><div class="k">待复习</div><div class="v">'+due.toLocaleString()+'<small>词</small></div></div></div>'+
    '<div class="panel"><div class="panel-title">最佳谱面</div>'+topHtml+'</div>'+
-   '<div class="panel"><div class="panel-title">PTT 曲线</div>'+pttChartHtml()+'</div>'+
+   '<div class="panel"><div class="panel-title">Potential 曲线</div>'+pttChartHtml()+'</div>'+
    '<div class="panel"><div class="panel-title">掌握度预测</div>'+forecastHtml(ptt.ptt)+'</div>'+
    '<div class="panel"><div class="panel-title">最近 7 天</div><div class="week">'+week+'</div></div>'+
    '<div class="panel"><div class="panel-title">记忆阶段分布</div>'+bars+'</div>'+
