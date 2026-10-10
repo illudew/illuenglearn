@@ -1427,7 +1427,7 @@ function renderStats(){
   var weakHtml=weak.slice(0,8).map(function(x){return '<div class="weak-row"><div><div class="weak-word">'+escapeHtml(x.w)+'</div><div class="weak-meta">'+lvName(x.lv)+' · 熟练度 '+x.prof+'%</div></div><div class="weak-meta">错 '+x.wrong+' 次</div></div>'}).join('')||'<div class="tiny">暂时没有高频错词。</div>';
   var topHtml=ptt.top.length?ptt.top.map(function(c){return '<div class="weak-row"><div><div class="weak-word">'+escapeHtml(c.label||c.key)+'</div><div class="weak-meta"><span class="bandtag cat-'+escapeHtml(c.band||'PST')+'">'+escapeHtml(c.band||'')+'</span> · 难度 '+dispDiff(c.diff)+' · 分数 '+Number(c.score||0).toLocaleString()+'</div></div><div class="weak-meta">潜力 <b>'+Number(c.potential||0).toFixed(2)+'</b></div></div>'}).join(''):'<div class="tiny">暂无记录</div>';
   $('view-stats').innerHTML=
-   '<div class="section-head"><div><div class="eyebrow">MEMORY PROFILE</div><h1 class="page-title">统计</h1></div></div>'+
+   '<div class="section-head"><div><div class="eyebrow">MEMORY PROFILE</div><h1 class="page-title">统计</h1></div><button class="btn ghost" id="statsHome" type="button">← 返回首页</button></div>'+
    '<div class="grid2">'+
    '<div class="stat"><div class="k">Potential</div><div class="v">'+ptt.ptt.toFixed(4)+'</div></div>'+
    '<div class="stat"><div class="k">r10</div><div class="v">'+ptt.r10.toFixed(2)+'<small>回忆近 '+ptt.r10n+' 次</small></div></div>'+
@@ -1445,6 +1445,7 @@ function renderStats(){
    '<div class="panel"><div class="panel-title">记忆阶段分布</div>'+bars+'</div>'+
    '<div class="panel"><div class="panel-title">个人记忆难度</div>'+dbars+'</div>'+
    '<div class="panel"><div class="panel-title">高频错误词</div>'+weakHtml+'</div>';
+  $('statsHome').onclick=function(){showView('home')};
 }
 function renderSettings(){
   var s=state.settings;
@@ -1456,7 +1457,7 @@ function renderSettings(){
     lvBtns+='<button class="choice'+(L===PROP_LV?' proper':'')+' '+(s.level===L?'on':'')+'" data-level="'+L+'" type="button">'+lvName(L)+'<small>'+learned+'/'+total+'</small></button>';
   }
   $('view-settings').innerHTML=
-   '<div class="section-head"><div><div class="eyebrow">SYSTEM</div><h1 class="page-title">设置</h1></div></div>'+
+   '<div class="section-head"><div><div class="eyebrow">SYSTEM</div><h1 class="page-title">设置</h1></div><button class="btn ghost" id="settingsHome" type="button">← 返回首页</button></div>'+
    '<div class="panel"><div class="panel-title">音频</div><div class="choice-grid two"><button class="choice '+(s.accent!=='uk'?'on':'')+'" data-accent="us" type="button">美音 US</button><button class="choice '+(s.accent==='uk'?'on':'')+'" data-accent="uk" type="button">英音 UK</button></div>'+
    '<div class="toggle"><span>自动朗读当前单词</span><input id="autoSpeak" class="switch" type="checkbox" '+(s.autoSpeak?'checked':'')+'></div>'+
    '<div class="toggle"><span>静音模式</span><input id="muteToggle" class="switch" type="checkbox" '+(s.mute?'checked':'')+'></div>'+
@@ -1476,6 +1477,7 @@ function renderSettings(){
   var ib=$('installBtn');if(ib)ib.onclick=pwaInstall;
   bindAccountPanel();
   refreshInstallBtn();
+  $('settingsHome').onclick=function(){showView('home')};
 }
 /* ---------- PWA：安装到桌面 ---------- */
 var deferredPrompt=null;
