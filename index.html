@@ -576,11 +576,17 @@ function chartPotential(diff,score){
   else p=diff+(score-9500000)/300000;
   return Math.max(0,p);
 }
-/* 记录某谱面本轮成绩：只保留历史最高潜力 */
+/* 记录某谱面本轮成绩：保留历史最高潜力，同时单独记录历史最高分值 bestScore */
 function recordChart(key,info){
   state.charts=state.charts||{};
   var prev=state.charts[key];
-  if(!prev||(info.potential||0)>=(prev.potential||0))state.charts[key]=info;
+  var bestScore=Math.max(+info.score||0,prev?(+prev.bestScore||+prev.score||0):0);
+  if(!prev||(info.potential||0)>=(prev.potential||0)){
+    info.bestScore=bestScore;
+    state.charts[key]=info;
+  }else{
+    prev.bestScore=bestScore;
+  }
   return state.charts[key];
 }
 /* 记录每日 PTT 快照（用于增长曲线），同一天只保留最新值 */
@@ -897,7 +903,8 @@ function renderLists(){
     var r=listResult(chartKey(lk));
     var v=l.v;
     var res=r?('<span class="chart-res"><b class="'+tierClass(gradeFromTier(r.tier))+'">'+gradeFromTier(r.tier)+'</b><b>'+Number(r.score||0).toLocaleString()+'</b>'+(r.hard?'<i>困难</i>':'')+'</span>'):'<span class="chart-res dim">未完成</span>';
-    var best=r&&r.score?('<span class="chart-best">最高 '+Number(r.score).toLocaleString()+'</span>'):'';
+    var bestVal=r?Number(r.bestScore||r.score||0):0;
+    var best=bestVal?('<span class="chart-best">最高 '+bestVal.toLocaleString()+'</span>'):'';
     var vLabel=c.nodiff?'':dispDiff(v);
     return '<button class="chart-btn list-btn" data-idx="'+i+'" type="button"><span class="cb-head"><span class="cb-list">List '+(i+1)+'</span>'+(vLabel?'<span class="cb-t cat-'+c.band+'">'+vLabel+'</span>':'')+'</span>'+res+'<span class="cb-n">'+(l.w||[]).length+' 词</span>'+best+'</button>';
   }).join('');
@@ -1544,7 +1551,10 @@ function finish(){
     recordChart(ctx.ckey,{key:ctx.ckey,label:ctx.catName+' List '+((ctx.idx||0)+1)+' · '+band,potential:potential,score:score,tier:tier,grade:grade,band:band,diff:diff,nodiff:!!ctx.nodiff,at:Date.now()});
     pushRound(potential);
     state.lists=state.lists||{};
-    state.lists[ctx.ckey]={done:!failed,tier:tier,grade:grade,score:score,hard:!!(ctx.hard&&!failed),maxCombo:maxCombo,late:vLate,bigP:vBig,potential:potential,band:band,diff:diff,at:today()};
+    var prevL=state.lists[ctx.ckey];
+    var prevBestL=prevL?(prevL.bestScore!=null?prevL.bestScore:(prevL.score||0)):0;
+    var bestScoreL=Math.max(score,prevBestL);
+    state.lists[ctx.ckey]={done:!failed,tier:tier,grade:grade,score:score,bestScore:bestScoreL,hard:!!(ctx.hard&&!failed),maxCombo:maxCombo,late:vLate,bigP:vBig,potential:potential,band:band,diff:diff,at:today()};
   }else if(ctx.type==='recall'){
     recordChart(ctx.ckey||('recall:'+band),{key:ctx.ckey||('recall:'+band),label:'回忆 · '+band,potential:potential,score:score,tier:tier,grade:grade,band:band,diff:diff,nodiff:false,at:Date.now()});
     state.recall=state.recall||[];
@@ -1555,7 +1565,8 @@ function finish(){
   var c=$('study-card');if(!c)return;
   var title=tier==='pure'?'Pure Memory':tier==='full'?'Full Recall':tier==='complete'?'Track Complete':'Track Lost';
   var mark=gradeFromTier(tier);
-  var bestScore=(ctx.ckey&&state.charts[ctx.ckey])?Number(state.charts[ctx.ckey].score||0):score;
+  var bestScore=(ctx.ckey&&state.charts[ctx.ckey])?Number(state.charts[ctx.ckey].bestScore||state.charts[ctx.ckey].score||0):score;
+  if(bestScore<score)bestScore=score;
   var bestLine=ctx.type==='list'?'<div class="settle-best">最高成绩 '+bestScore.toLocaleString()+'</div>':'';
   var hardBadge=(ctx.hard&&!failed)?'<span class="settle-hard">困难</span>':'';
   var modeLabelShort=(ctx.mode&&ctx.mode!=='auto')?modeLabel(ctx.mode).split(' · ')[0]:'混合';
