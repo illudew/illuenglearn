@@ -1236,7 +1236,7 @@ function troubleWords(d){
   return out.slice(0,40).map(function(o){return o.x});
 }
 function buildOptions(d,md){
-  md=md||state.settings.mode;var opts=[d],used={},need=(md==='en2zh'?2:3),i;
+  md=md||state.settings.mode;var opts=[d],used={},need=3,i;
   used[d.w]=1;
   /* ---------- en2zh：按难度分档打分选干扰项 ---------- */
   if(md==='en2zh'){
