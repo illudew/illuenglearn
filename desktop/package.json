@@ -19,7 +19,12 @@
     "productName": "WORDS",
     "files": [
       "main.js",
-      "index.html"
+      {
+        "from": "../index.html"
+      },
+      {
+        "from": "../words.json"
+      }
     ],
     "directories": {
       "output": "release",

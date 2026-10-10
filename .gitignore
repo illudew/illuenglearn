@@ -1,0 +1,16 @@
+# 依赖
+node_modules/
+
+# 桌面版构建产物（图标由 CI 从根目录 icon-*.png 生成）
+desktop/release/
+desktop/build/
+desktop/index.html
+
+# 工具 / 分享缓存
+.uploads/
+.trae-html-share-packages/
+
+# 系统 / 编辑器
+.DS_Store
+Thumbs.db
+*.log

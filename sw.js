@@ -1,8 +1,9 @@
-/* WORDS Service Worker —— 离线可用（词库全部内嵌，联网仅用于在线发音） */
-var CACHE = 'words-v7-16';
+/* WORDS Service Worker —— 离线可用（词库见 words.json，联网仅用于在线发音） */
+var CACHE = 'words-v7-18';
 var ASSETS = [
   './',
   './index.html',
+  './words.json',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',

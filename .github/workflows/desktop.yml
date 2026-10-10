@@ -32,9 +32,9 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Prepare app files
+      - name: Prepare app icon
         shell: bash
-        run: cp index.html desktop/index.html
+        run: mkdir -p desktop/build && cp icon-512.png desktop/build/icon.png
 
       - name: Install dependencies
         working-directory: desktop
