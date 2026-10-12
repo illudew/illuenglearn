@@ -404,7 +404,13 @@ var DAILY_GOAL=20;
    获取方式：supabase.com 新建项目 → Project Settings → API，复制 Project URL 与 anon public key。
    建表 SQL 见设置页「云端账号」面板。 */
 var SB={url:'https://pxzirgzyryohqqinrgxu.supabase.co',anonKey:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB4emlyZ3p5cnlvaHFxaW5yZ3h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyNTQ4MzUsImV4cCI6MjEwNjgzMDgzNX0.BMTh2RNH4eni3j4ktKaS44aE0MgpbxV8-3EwQPjv1-8',table:'words_progress',cdn:'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js'};
-var DEFAULT={schema:2,settings:{dailyNew:500,reviewLimit:1000,level:5,mode:'auto',accent:'us',speechRate:0.92,autoSpeak:false,mute:false,remindOn:false,remindTime:'20:00',remindLast:''},words:{},days:{},streak:{count:0,last:null},totalAnswers:0,totalCorrect:0,totalSeconds:0,recent:[],pttHistory:[],rounds:[],lists:{},charts:{},recall:[],sync:{auto:true,lastAt:0}};
+var DEFAULT={schema:2,settings:{dailyNew:500,reviewLimit:1000,level:5,mode:'auto',accent:'us',speechRate:0.92,autoSpeak:false,mute:false,remindOn:false,remindTime:'20:00',remindLast:'',hotkeys:{hint:'h',speak:' ',nextFeedback:'n',option1:'1',option2:'2',option3:'3',option4:'4',submit:'Enter'}},words:{},days:{},streak:{count:0,last:null},totalAnswers:0,totalCorrect:0,totalSeconds:0,recent:[],pttHistory:[],rounds:[],lists:{},charts:{},recall:[],sync:{auto:true,lastAt:0}};
+/* 动作 -> 中文标签（设置页用） */
+var HK_LABEL={hint:'显示提示',speak:'播放发音',nextFeedback:'下一题（结算后）',option1:'选 1',option2:'选 2',option3:'选 3',option4:'选 4',submit:'提交 / 下一题'};
+/* 把 KeyboardEvent.key 转成人能读的标签 */
+function hkLabel(k){if(!k)return '—';if(k===' ')return 'Space';if(k==='Enter')return 'Enter';if(k==='Tab')return 'Tab';if(k==='Escape')return 'Esc';if(k.length===1)return k.toUpperCase();return k}
+/* 默认快捷键表，供「恢复默认」使用 */
+function defaultHotkeys(){return JSON.parse(JSON.stringify({hint:'h',speak:' ',nextFeedback:'n',option1:'1',option2:'2',option3:'3',option4:'4',submit:'Enter'}))}
 
 /* ---------- word bank ---------- */
 var WORDS=(window.WORDS_BANK||[]).map(function(a){return {w:a[0],us:a[1]||'',uk:a[2]||'',zh:a[3]||'',pos:a[4]||'',baseLv:a[5]||5,def:a[6]||'',tags:a[7]||'',ex:a[8]||'',sen:a[9]||'',core:a[10]||''}});
@@ -1723,6 +1729,7 @@ function renderSettings(){
    '<div class="toggle"><span>自动朗读当前单词</span><input id="autoSpeak" class="switch" type="checkbox" '+(s.autoSpeak?'checked':'')+'></div>'+
    '<div class="toggle"><span>静音模式</span><input id="muteToggle" class="switch" type="checkbox" '+(s.mute?'checked':'')+'></div>'+
    '<div class="range-row"><span class="tiny">语速</span><input id="rateRange" class="range" type="range" min="0.65" max="1.15" step="0.05" value="'+s.speechRate+'"><div id="rateVal" class="range-val">'+Number(s.speechRate).toFixed(2)+'</div></div></div>'+
+   '<div class="panel"><div class="panel-title">快捷键（自由录制）</div><div id="hkList"></div><div class="tiny" style="margin-top:8px">点击右侧按钮后按下你想绑定的键（单个按键，不支持组合键）。按 Esc 可取消录制。</div><div class="actions" style="margin-top:10px"><button class="btn ghost" id="hkReset" type="button">恢复默认</button></div></div>'+
    '<div class="panel"><div class="panel-title">学习提醒</div>'+
    '<div class="toggle"><span>每日提醒（到点未打卡则通知）</span><input id="remindToggle" class="switch" type="checkbox" '+(s.remindOn?'checked':'')+' aria-label="每日学习提醒"></div>'+
    '<div class="row"><label for="remindTime">提醒时间</label><input id="remindTime" type="time" value="'+escapeHtml(s.remindTime||'20:00')+'" aria-label="提醒时间" style="padding:8px 10px;border-radius:10px;border:1px solid #2b3340;background:#12161d;color:#eef2f7"></div>'+
@@ -1745,6 +1752,61 @@ function renderSettings(){
   bindAccountPanel();
   refreshInstallBtn();
   $('settingsHome').onclick=function(){showView('home')};
+  renderHotkeyPanel();
+}
+/* ---------- 设置：快捷键录制面板 ---------- */
+var _hkRecordingAction=null;
+function renderHotkeyPanel(){
+  var list=$('hkList');if(!list)return;
+  var hk=hotkeysOf();
+  var order=['submit','hint','speak','nextFeedback','option1','option2','option3','option4'];
+  var html=order.map(function(a){
+    var occupiedBy=occupiedByKey(hk,a);
+    var occupiedTag=occupiedBy?(' <span class="tiny" style="color:#8a6259">（与 '+HK_LABEL[occupiedBy]+' 重复）</span>'):'';
+    return '<div class="toggle" style="padding:5px 0"><span>'+HK_LABEL[a]+occupiedTag+'</span>'+
+      '<button class="btn ghost hk-btn" data-action="'+a+'" type="button" style="min-width:78px;font-family:ui-monospace,monospace">'+hkLabel(hk[a])+'</button></div>';
+  }).join('');
+  list.innerHTML=html;
+  list.querySelectorAll('.hk-btn').forEach(function(btn){
+    btn.onclick=function(e){e.preventDefault();startRecordHotkey(btn.dataset.action,btn)};
+  });
+  $('hkReset').onclick=function(){
+    state.settings.hotkeys=defaultHotkeys();save();_hkRecordingAction=null;renderSettings();toast('快捷键已恢复默认');
+  };
+}
+/* 如果某个 action 当前的绑定键已被别的 action 占用，返回那个 action 的名字 */
+function occupiedByKey(hk,action){
+  var me=(hk[action]||'').toLowerCase();if(!me)return null;
+  for(var k in hk){if(k!==action&&(hk[k]||'').toLowerCase()===me)return k}
+  return null;
+}
+function startRecordHotkey(action,btn){
+  _hkRecordingAction=action;
+  var oldText=btn.textContent;
+  btn.textContent='请按键…';btn.classList.add('on');
+  function onKey(e){
+    e.preventDefault();e.stopPropagation();
+    var act=_hkRecordingAction;
+    btn.classList.remove('on');
+    _hkRecordingAction=null;
+    document.removeEventListener('keydown',onKey,true);
+    if(!act)return;
+    if(e.key==='Escape'){btn.textContent=oldText;toast('已取消录制');return}
+    if(e.key==='F5'||(e.ctrlKey&&e.key.toLowerCase()==='r')){btn.textContent=oldText;toast('请不要绑定会刷新浏览器的键');return}
+    if(e.repeat){btn.textContent=oldText;return}
+    /* 禁止修饰键本身作为绑定（修饰键单独按下无意义），但带修饰键的组合也先不支持（单键即可） */
+    if(['Shift','Control','Alt','Meta','CapsLock','NumLock','ScrollLock','OS'].indexOf(e.key)>=0){
+      btn.textContent=oldText;toast('不能绑定修饰键本身');return;
+    }
+    state.settings.hotkeys[act]=e.key;save();
+    renderHotkeyPanel();
+    toast(HK_LABEL[act]+' → '+hkLabel(e.key));
+  }
+  document.addEventListener('keydown',onKey,true);
+  /* 录制期间如果用户点了别处（按钮没按到键就离开了），自动取消 */
+  setTimeout(function(){
+    if(_hkRecordingAction===action){_hkRecordingAction=null;document.removeEventListener('keydown',onKey,true);btn.classList.remove('on');btn.textContent=oldText}
+  },8000);
 }
 /* ---------- PWA：安装到桌面 ---------- */
 var deferredPrompt=null;
@@ -1997,35 +2059,28 @@ function statusDotActivate(){if(sbUser)cloudSyncSmart(false);else if(sbConfigure
 var dsEl=$('dataStatus');
 if(dsEl){dsEl.onclick=statusDotActivate;dsEl.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();statusDotActivate()}}}
 
-/* ---------- keyboard ---------- */
+/* ---------- keyboard（快捷键全部查表） ---------- */
+function hotkeysOf(){var h=state.settings&&state.settings.hotkeys;if(!h){h=defaultHotkeys();state.settings.hotkeys=h}return h}
+function hkHit(e,action){var want=(hotkeysOf()[action]||'').toLowerCase();var got=(e.key||'').toLowerCase();return want&&got===want}
 document.addEventListener('keydown',function(e){
   var tag=e.target&&e.target.tagName;
-  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return; /* 设置项里的输入不参与答题快捷键 */
-  if(e.key==='Enter'){
-    if(!session)return;
-    if(phase==='feedback'){e.preventDefault();next();return}
-    if(phase==='question'&&isTypedMode()){e.preventDefault();submitTyped();return}
-    return
+  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return; /* 输入框里不劫持答题快捷键 */
+  if(e.repeat)return;  /* 长按不要重复触发 */
+  if(!session||!session.queue.length){
+    /* 只有全局仍然允许的快捷键（此处只有 submit 不需要 session） */
+    if(hkHit(e,'submit')){/* submit 在无 session 时忽略 */}
+    return;
   }
-  if(!session||!session.queue.length)return;
   if(phase==='question'){
-    var n=parseInt(e.key,10);
-    if(n>=1&&n<=4){var b=document.querySelector('#options .opt[data-i="'+n+'"]');if(b&&!b.disabled){e.preventDefault();b.click()}return}
-  }
-  /* 快捷键：H=提示（question 阶段生效），Space=播放发音，N=下一题（feedback 阶段替代 Enter） */
-  if((e.key==='h'||e.key==='H')){
-    e.preventDefault();
-    if(phase==='question')hint();
-    return;
-  }
-  if(e.key===' '){
-    e.preventDefault();
-    var d=currentData();if(d)speak(d.w);
-    return;
-  }
-  if((e.key==='n'||e.key==='N')&&phase==='feedback'){
-    e.preventDefault();next();
-    return;
+    /* 遍历 option1..option4 的动作绑定，每个动作对应一个选项按钮 */
+    for(var oi=1;oi<=4;oi++){
+      if(hkHit(e,'option'+oi)){var b=document.querySelector('#options .opt[data-i="'+oi+'"]');if(b&&!b.disabled){e.preventDefault();b.click()}return}
+    }
+    if(hkHit(e,'hint')){e.preventDefault();hint();return}
+    if(hkHit(e,'speak')){e.preventDefault();var d=currentData();if(d)speak(d.w);return}
+    if(hkHit(e,'submit')&&isTypedMode()){e.preventDefault();submitTyped();return}
+  }else if(phase==='feedback'){
+    if(hkHit(e,'submit')||hkHit(e,'nextFeedback')){e.preventDefault();next();return}
   }
 });
 
