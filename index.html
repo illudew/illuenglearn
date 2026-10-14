@@ -861,6 +861,9 @@ function dueListsHtml(){
   if(!arr.length)return '';
   var total=0;arr.forEach(function(x){total+=x.count});
   return '<div class="panel due-panel"><div class="panel-title">今日待复习 · '+total+' 词</div>'+
+    '<div class="lt-group"><span class="lt-label">题型</span><div class="rec-grid" id="dueMode">'+
+      rcModes().map(function(m){return '<button type="button" data-mode="'+m.k+'" class="'+(listSel.mode===m.k?'on':'')+'">'+m.n+'</button>'}).join('')+
+    '</div></div>'+
     arr.map(function(x){
       return '<div class="due-row"><div class="due-main"><div class="due-t">'+escapeHtml(x.catName)+' · List '+(x.idx+1)+' <span class="bandtag cat-'+x.band+'">'+escapeHtml(x.band)+'</span></div><div class="due-s">'+x.count+' 词待复习</div></div>'+
         '<button class="btn primary due-go" data-due="'+escapeHtml(x.key)+'" type="button">复习</button></div>';
@@ -931,6 +934,8 @@ function renderHome(){
   $('homeStats').onclick=function(){showView('stats')};
   $('homeSearch').onclick=function(){showView('search')};
   $('homeSet').onclick=function(){showView('settings')};
+  var dueMode=$('dueMode');
+  if(dueMode)dueMode.querySelectorAll('[data-mode]').forEach(function(b){b.onclick=function(){listSel.mode=b.dataset.mode;renderHome()}});
   document.querySelectorAll('#view-home [data-due]').forEach(function(b){b.onclick=function(){startDueList(b.dataset.due)}});
 }
 /* ---------- 单词搜索 ---------- */
