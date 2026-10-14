@@ -325,6 +325,18 @@ button{cursor:pointer}
 .search-item .detail-box{padding:2px 13px 10px}
 .row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:8px 0}
 .row label{font-size:12.5px;color:#c7cfdb}
+/* List 行：主按钮 + 重置按钮 */
+.list-row{display:flex;gap:8px;align-items:center}
+.list-row .list-btn{flex:1;min-width:0}
+.list-reset{flex:0 0 auto;padding:10px 12px;font-size:12px;border-radius:11px}
+/* 今日待复习 */
+.due-panel{margin-top:10px}
+.due-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #1f242d}
+.due-row:first-of-type{border-top:none}
+.due-main{flex:1;min-width:0}
+.due-t{font-size:13.5px;font-weight:650;color:#eef2f7}
+.due-s{font-size:11px;color:#7f8ba1;margin-top:2px}
+.due-go{flex:0 0 auto;padding:9px 14px;font-size:12.5px}
 @media(max-width:420px){.choice-grid{grid-template-columns:repeat(3,1fr)}.choice-grid.ten{grid-template-columns:repeat(4,1fr)}.word{font-size:31px}.meaning{font-size:20px}.topbar{padding:17px 12px 9px}.top-meta{gap:5px}.streak{font-size:11px;padding:6px 9px}}
 </style>
 </head>
@@ -422,7 +434,7 @@ var MAP={};WORDS.forEach(function(d){MAP[d.w]=d});
 var CATS=(window.EXAM_LISTS||[]).map(function(c){
   return {k:c.k,n:c.n,band:c.band||'PST',nodiff:!!c.nodiff,count:c.lists.reduce(function(s,l){return s+(l.w||[]).length},0),lists:c.lists.slice()};
 });
-var CAT_OF={},LIST_OF={},LIST_BY_KEY={},BAND_WORDS={PST:[],PRS:[],FTR:[],BYD:[],ALL:[]};
+var CAT_OF={},LIST_OF={},LIST_BY_KEY={},KEYS_OF={},BAND_WORDS={PST:[],PRS:[],FTR:[],BYD:[],ALL:[]};
 // 回忆模式 band 按单词自身 baseLv 难度严格切分，确保四档难度明显区分
 (function(){
   WORDS.forEach(function(d){
@@ -438,7 +450,10 @@ CATS.forEach(function(c){
   c.lists.forEach(function(l,idx){
     var key=c.k+':'+idx;
     LIST_BY_KEY[key]={catKey:c.k,catName:c.n,band:c.band,nodiff:!!c.nodiff,idx:idx,diff:(l.v!=null?l.v:null),words:l.w||[],key:key};
-    (l.w||[]).forEach(function(w){CAT_OF[w]=c.k;LIST_OF[w]=key});
+    (l.w||[]).forEach(function(w){
+      CAT_OF[w]=c.k;LIST_OF[w]=key;
+      var ks=KEYS_OF[w]||(KEYS_OF[w]=[]);if(ks.indexOf(key)<0)ks.push(key);
+    });
   });
 });
 function listKey(k,i){return k+':'+i}
@@ -794,6 +809,7 @@ function exitStudy(){
   session=null;phase='question';
   if(ctx.type==='recall')showView('recall');
   else if(ctx.type==='mistakes')showView('stats');
+  else if(ctx.type==='due')showView('home');
   else if(ctx.catKey){curCatKey=ctx.catKey;showView('lists')}
   else showView('home');
 }
@@ -809,7 +825,7 @@ function bindModeSeg(){}
 function renderStudy(){
   var el=$('view-study');if(!el)return;
   var ctx=(session&&session.ctx)||lastCtx||{};
-  var title=ctx.type==='recall'?('回忆模式 · '+ctx.band):ctx.type==='mistakes'?('错题强化 · '+((session&&session.total)||0)+' 词'):(ctx.catName?ctx.catName+' · '+(ctx.v!=null?dispDiff(ctx.v):''):'学习');
+  var title=ctx.type==='recall'?('回忆模式 · '+ctx.band):ctx.type==='mistakes'?('错题强化 · '+((session&&session.total)||0)+' 词'):(ctx.catName?(ctx.v!=null?ctx.catName+' · '+dispDiff(ctx.v):ctx.catName):'学习');
   var bandTag=ctx.band?'<span class="bandtag cat-'+ctx.band+'">'+ctx.band+'</span>':'';
   var hardBadge=ctx.hard?'<span class="settle-hard">困难</span>':'';
   var hp=ctx.hard?'<div class="hp-wrap"><div class="hp-bar"><i id="hpFill" style="width:'+((session&&session.hp!=null)?session.hp:100)+'%"></i></div></div>':'';
@@ -817,6 +833,84 @@ function renderStudy(){
   var b=$('studyBack');if(b)b.onclick=exitStudy;
   bindGestures();
 }
+/* ---------- 今日待复习（按遗忘曲线到期聚合） ---------- */
+/* 某 List 当前所有到期单词（seen>0 且 dueAt 已过） */
+function dueWordsOfList(key){
+  var L=LIST_BY_KEY[key];if(!L)return [];
+  var t=Date.now();
+  return (L.words||[]).filter(function(w){
+    var r=state.words[w];
+    return r&&r.seen>0&&(r.dueAt||0)<=t;
+  });
+}
+/* 聚合出「有到期单词」的 List，按待复习词数从多到少排列 */
+function dueListsInfo(){
+  var out=[];
+  Object.keys(LIST_BY_KEY).forEach(function(key){
+    var n=dueWordsOfList(key).length;
+    if(!n)return;
+    var L=LIST_BY_KEY[key];
+    out.push({key:key,catKey:L.catKey,catName:L.catName,idx:L.idx,band:L.band,diff:L.diff,nodiff:!!L.nodiff,count:n});
+  });
+  out.sort(function(a,b){return b.count-a.count||(a.catName<b.catName?-1:a.catName>b.catName?1:0)||a.idx-b.idx});
+  return out;
+}
+/* 首页「今日待复习」面板：复习完该 List 的到期词后，本面板会自动消失 */
+function dueListsHtml(){
+  var arr=dueListsInfo();
+  if(!arr.length)return '';
+  var total=0;arr.forEach(function(x){total+=x.count});
+  return '<div class="panel due-panel"><div class="panel-title">今日待复习 · '+total+' 词</div>'+
+    arr.map(function(x){
+      return '<div class="due-row"><div class="due-main"><div class="due-t">'+escapeHtml(x.catName)+' · List '+(x.idx+1)+' <span class="bandtag cat-'+x.band+'">'+escapeHtml(x.band)+'</span></div><div class="due-s">'+x.count+' 词待复习</div></div>'+
+        '<button class="btn primary due-go" data-due="'+escapeHtml(x.key)+'" type="button">复习</button></div>';
+    }).join('')+'</div>';
+}
+/* 复习某个 List 的全部到期单词（纯复习，不写入谱面成绩/PTT） */
+function startDueList(key){
+  var L=LIST_BY_KEY[key];if(!L){toast('List 不存在');return}
+  var words=dueWordsOfList(key);
+  if(!words.length){toast('该 List 暂无到期单词');return}
+  if(!clearSessionIfAny('当前学习还没完成，重新开始？'))return;
+  var q=shuffle(words).map(function(w){return {w:w,kind:'review'}});
+  beginSession(q,'复习到期 · '+L.catName+' List '+(L.idx+1)+' · '+q.length+' 词',
+    {type:'due',catKey:L.catKey,catName:L.catName,idx:L.idx,key:key,band:L.band,v:L.diff==null?null:L.diff,nodiff:!!L.nodiff,mode:listSel.mode||'auto'});
+}
+/* 该 List 是否有可重置的数据（成绩 / 谱面 / 词条记忆记录） */
+function listHasRecord(key){
+  if((state.lists&&state.lists[key])||(state.charts&&state.charts[key]))return true;
+  var L=LIST_BY_KEY[key];if(!L)return false;
+  var ws=L.words||[];
+  for(var i=0;i<ws.length;i++){var r=state.words[ws[i]];if(r&&r.seen>0)return true}
+  return false;
+}
+/* 把某个 List 重置为最初状态：抹除该 List 的成绩、谱面与其中的词条记忆记录 */
+function resetList(key){
+  var L=LIST_BY_KEY[key];if(!L){toast('List 不存在');return}
+  var words=L.words||[];
+  if(state.lists)delete state.lists[key];
+  if(state.charts)delete state.charts[key];
+  var cleared=0,kept=0;
+  words.forEach(function(w){
+    if(!state.words[w])return;
+    if((KEYS_OF[w]||[]).length>1){kept++;return}   /* 仍被其他 List 引用，保留其记录 */
+    delete state.words[w];cleared++;
+  });
+  save();
+  if(curCatKey===L.catKey)renderLists();
+  toast('已重置 '+L.catName+' List '+(L.idx+1)+'：清除 '+cleared+' 词记录'+(kept?'（'+kept+' 词与其他 List 共用，已保留）':''));
+}
+/* 结算页「再过一遍」：用本轮相同的单词与模式重新开始一轮 */
+function restartRound(){
+  if(!lastRound)return;
+  var ctx=Object.assign({},lastRound.ctx||{});
+  delete ctx.__seenEn2zh;   /* 丢弃上一轮的选项去重集合，避免复用导致误判 */
+  var words=(lastRound.log||[]).map(function(x){return x.w}).filter(function(w){return MAP[w]});
+  if(!words.length){toast('没有可重玩的单词');return}
+  var q=shuffle(words).map(function(w){var r=state.words[w];return {w:w,kind:(r&&r.seen>0?'review':'new')}});
+  beginSession(q,'再过一遍 · '+q.length+' 词',ctx);
+}
+
 /* ---------- 首页 / 分类 / list / 回忆 ---------- */
 function renderHome(){
   var el=$('view-home');if(!el)return;
@@ -824,6 +918,7 @@ function renderHome(){
   var totalLists=0;CATS.forEach(function(c){totalLists+=c.lists.length});
   var doneCharts=Object.keys(state.charts||{}).length;
   el.innerHTML='<div class="section-head"><div><div class="eyebrow">WORDS · '+WORDS.length.toLocaleString()+' WORDS</div><h1 class="page-title">背单词</h1></div></div>'+
+   dueListsHtml()+
    '<div class="home-grid">'+
      '<button class="home-btn cta" id="homeStudy" type="button"><span class="hb-ico">▤</span><span class="hb-t">背单词</span><span class="hb-s">12 类考试词库 · '+totalLists+' 个 List · 已记录 '+doneCharts+' 个谱面</span></button>'+
      '<button class="home-btn" id="homeRecall" type="button"><span class="hb-ico">◐</span><span class="hb-t">回忆模式</span><span class="hb-s">自选难度与词数</span></button>'+
@@ -836,6 +931,7 @@ function renderHome(){
   $('homeStats').onclick=function(){showView('stats')};
   $('homeSearch').onclick=function(){showView('search')};
   $('homeSet').onclick=function(){showView('settings')};
+  document.querySelectorAll('#view-home [data-due]').forEach(function(b){b.onclick=function(){startDueList(b.dataset.due)}});
 }
 /* ---------- 单词搜索 ---------- */
 function wordDetailHtml(d){
@@ -912,7 +1008,9 @@ function renderLists(){
     var bestVal=r?Number(r.bestScore||r.score||0):0;
     var best=bestVal?('<span class="chart-best">最高 '+bestVal.toLocaleString()+'</span>'):'';
     var vLabel=c.nodiff?'':dispDiff(v);
-    return '<button class="chart-btn list-btn" data-idx="'+i+'" type="button"><span class="cb-head"><span class="cb-list">List '+(i+1)+'</span>'+(vLabel?'<span class="cb-t cat-'+c.band+'">'+vLabel+'</span>':'')+'</span>'+res+'<span class="cb-n">'+(l.w||[]).length+' 词</span>'+best+'</button>';
+    var main='<button class="chart-btn list-btn" data-idx="'+i+'" type="button"><span class="cb-head"><span class="cb-list">List '+(i+1)+'</span>'+(vLabel?'<span class="cb-t cat-'+c.band+'">'+vLabel+'</span>':'')+'</span>'+res+'<span class="cb-n">'+(l.w||[]).length+' 词</span>'+best+'</button>';
+    var reset=listHasRecord(lk)?'<button class="btn danger list-reset" data-reset="'+i+'" type="button" title="重置该 List">重置</button>':'';
+    return '<div class="list-row">'+main+reset+'</div>';
   }).join('');
   el.innerHTML='<div class="crumb"><button class="back" id="listsBack" type="button">← 词库</button><span class="crumb-t">'+escapeHtml(c.n)+' <span class="bandtag cat-'+c.band+'">'+c.band+'</span></span><span class="crumb-s">'+c.count+' 词 · '+c.lists.length+' 个 List</span></div>'+
    '<div class="list-toolbar"><div class="lt-group"><span class="lt-label">题型</span><div class="rec-grid" id="listMode">'+
@@ -924,6 +1022,11 @@ function renderLists(){
   var ht=$('hardToggle');
   ht.onchange=function(){state.settings.hard=ht.checked;save()};
   el.querySelectorAll('[data-idx]').forEach(function(b){b.onclick=function(){startList(c.k,+b.dataset.idx,ht.checked,listSel.mode)}});
+  el.querySelectorAll('[data-reset]').forEach(function(b){b.onclick=function(){
+    var i=+b.dataset.reset;
+    if(!confirm('重置「'+c.n+' List '+(i+1)+'」？将抹除该 List 的成绩与该 List 单词的学习记录，且不可恢复。'))return;
+    resetList(listKey(c.k,i));
+  }});
 }
 var RC_MODES=[{k:'auto',n:'混合'},{k:'en2zh',n:'英译汉'},{k:'zh2en',n:'汉译英'},{k:'spell',n:'拼写'},{k:'listen',n:'听写'},{k:'clozeFill',n:'填空'}];
 /* 静音模式下不提供听写题型 */
@@ -1585,10 +1688,12 @@ function finish(){
    '<div class="settle-meta"><span><b>'+maxCombo+'</b>MAX COMBO</span><span><b>'+vLate+'</b>记为 Late</span><span><b>'+potential.toFixed(2)+'</b>谱面潜力</span><span><b>'+escapeHtml(modeLabelShort)+'</b>题型</span></div>'+
    bestLine+
    '<div class="settle-verdicts"><span class="vs pure">pure<b>'+vP+'</b></span><span class="vs far">far<b>'+vF+'</b></span><span class="vs lost">lost<b>'+vL+'</b></span></div>'+
-   '<div class="actions"><button class="btn ghost" id="reviewBtn" type="button">回看本轮单词</button><button class="btn ghost" id="backBtn" type="button">返回列表</button><button class="btn primary" id="statsBtn" type="button">查看统计</button></div>'+
+   '<div class="actions"><button class="btn primary" id="againBtn" type="button">再过一遍</button></div>'+
+   '<div class="actions"><button class="btn ghost" id="reviewBtn" type="button">回看本轮单词</button><button class="btn ghost" id="backBtn" type="button">'+(ctx.type==='due'?'返回首页':'返回列表')+'</button><button class="btn ghost" id="statsBtn" type="button">查看统计</button></div>'+
    '<div id="roundReview" class="round-review hidden"></div></div>';
   $('statsBtn').onclick=function(){showView('stats')};
   $('backBtn').onclick=function(){exitStudy()};
+  $('againBtn').onclick=restartRound;
   var rb=$('reviewBtn');if(rb)rb.onclick=toggleRoundReview;
 }
 /* 结算页回看本轮所有单词（新→旧） */
