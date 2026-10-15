@@ -311,6 +311,8 @@ button{cursor:pointer}
 .settle-meta span b{display:block;font-size:18px;color:#eef2f7;font-weight:800}
 .settle-best{text-align:center;font-size:11px;color:#7f8ba1;margin-top:8px;letter-spacing:.3px}
 .settle-best b{color:#9fb4d0}
+.new-best{display:inline-block;font-size:13px;font-weight:800;letter-spacing:3px;color:#ffce4d;border:1px solid rgba(255,206,77,.5);background:rgba(255,206,77,.1);border-radius:9px;padding:4px 14px;margin:0 0 16px;text-shadow:0 0 14px rgba(255,206,77,.55);animation:newBestIn .5s cubic-bezier(.2,.8,.3,1)}
+@keyframes newBestIn{0%{opacity:0;transform:scale(.7)}60%{opacity:1;transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}
 .rec-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:8px 0 14px}
 .rec-grid button{padding:11px;border-radius:11px;border:1px solid #2b3340;background:#12161d;color:#eef2f7;font-size:13px;cursor:pointer}
 .rec-grid button.on{border-color:#3a68c8;background:#171f2c;color:#8fb4ff}
@@ -745,7 +747,7 @@ function pushAhead(q,item,gap){
 /* ---------- session ---------- */
 var lastCtx=null,curCatKey=null,recallSel={band:'PST',count:20,hard:false,mode:'auto'},listSel={mode:'auto'};
 function beginSession(q,msg,ctx){
-  session={queue:q,total:q.length,correct:0,wrong:0,cards:0,lastAutoMode:null,autoBag:null,single:true,
+  session={queue:q,total:q.length,correct:0,wrong:0,cards:0,lastAutoMode:null,autoBag:null,single:!(ctx&&ctx.multi),
     vPure:0,vFar:0,vBig:0,vLate:0,vLost:0,uniq:{},uniqN:0,combo:0,maxCombo:0,log:[],ctx:ctx||{type:'list'}};
   lastCtx=session.ctx;
   if(session.ctx.hard){session.hp=100;session.hardErr=0;}
@@ -766,8 +768,8 @@ function startList(catKey,idx,hard,mode){
   if(!words.length){toast('该难度暂无单词');return}
   if(!clearSessionIfAny('当前学习还没完成，重新开始？'))return;
   var q=shuffle(words.map(function(w){var r=state.words[w];return {w:w,kind:(r&&r.seen>0?'review':'new')}}));
-  beginSession(q,'开始：'+L.catName+' · Lv.'+(L.lv!=null?L.lv:'?')+(hard?' · 困难模式':'')+(mode&&mode!=='auto'?' · '+modeLabel(mode).split(' · ')[0]:''),
-    {type:'list',catKey:catKey,catName:L.catName,idx:idx,key:L.key,ckey:chartKey(L.key),band:band,v:(v==null?null:v),nodiff:!!L.nodiff,hard:!!hard,mode:mode});
+  beginSession(q,'开始：'+L.catName+' · List '+(idx+1)+(v!=null?' · '+dispDiff(v):'')+(hard?' · 困难模式':'')+(mode&&mode!=='auto'?' · '+modeLabel(mode).split(' · ')[0]:''),
+    {type:'list',catKey:catKey,catName:L.catName,idx:idx,key:L.key,ckey:chartKey(L.key),band:band,v:(v==null?null:v),nodiff:!!L.nodiff,hard:!!hard,mode:mode,multi:true});
 }
 /* 回忆模式：自选难度档、单词数与题型；记录只保留最近 10 次 */
 function startRecall(band,count,hard,mode){
@@ -825,7 +827,7 @@ function bindModeSeg(){}
 function renderStudy(){
   var el=$('view-study');if(!el)return;
   var ctx=(session&&session.ctx)||lastCtx||{};
-  var title=ctx.type==='recall'?('回忆模式 · '+ctx.band):ctx.type==='mistakes'?('错题强化 · '+((session&&session.total)||0)+' 词'):(ctx.catName?(ctx.v!=null?ctx.catName+' · '+dispDiff(ctx.v):ctx.catName):'学习');
+  var title=ctx.type==='recall'?('回忆模式 · '+ctx.band):ctx.type==='mistakes'?('错题强化 · '+((session&&session.total)||0)+' 词'):(ctx.catName?(ctx.catName+' · List '+((ctx.idx||0)+1)+(ctx.v!=null?' · '+dispDiff(ctx.v):'')):'学习');
   var bandTag=ctx.band?'<span class="bandtag cat-'+ctx.band+'">'+ctx.band+'</span>':'';
   var hardBadge=ctx.hard?'<span class="settle-hard">困难</span>':'';
   var hp=ctx.hard?'<div class="hp-wrap"><div class="hp-bar"><i id="hpFill" style="width:'+((session&&session.hp!=null)?session.hp:100)+'%"></i></div></div>':'';
@@ -908,7 +910,8 @@ function restartRound(){
   if(!lastRound)return;
   var ctx=Object.assign({},lastRound.ctx||{});
   delete ctx.__seenEn2zh;   /* 丢弃上一轮的选项去重集合，避免复用导致误判 */
-  var words=(lastRound.log||[]).map(function(x){return x.w}).filter(function(w){return MAP[w]});
+  var seenW={},words=[];
+  (lastRound.log||[]).forEach(function(x){if(x&&MAP[x.w]&&!seenW[x.w]){seenW[x.w]=1;words.push(x.w)}});
   if(!words.length){toast('没有可重玩的单词');return}
   var q=shuffle(words).map(function(w){var r=state.words[w];return {w:w,kind:(r&&r.seen>0?'review':'new')}});
   beginSession(q,'再过一遍 · '+q.length+' 词',ctx);
@@ -1484,7 +1487,8 @@ function submit(force,chosenW){
   /* 队列推进：初识词先隔几个词再考一次（复现通过后才解锁 PTT）；其余按对错正常排程 */
   session.cards++;
   var rec=session.queue.shift();
-  /* list / 回忆模式为单遍：每个单词一轮只出现一次，方便按词计分 */
+  /* 背单词（list，ctx.multi）为多轮循环：初识词隔几个词复现一次、答错立即回炉；
+     回忆 / 错题 / 到期复习为单遍，每个单词一轮只出现一次，方便按词计分 */
   if(!session.single){
     if(firstMeet){session.total++;session.queue=pushAhead(session.queue,{w:rec.w,kind:'retest'},firstGap())}
     else if(!ok){session.total++;session.queue=pushAhead(session.queue,{w:rec.w,kind:'review'},reviewGap())}
@@ -1659,7 +1663,12 @@ function finish(){
   var band=ctx.band||'PST';
   var diff=+ctx.v||0;
   var potential=chartPotential(diff,score);
-  lastRound={log:log,cards:total,vP:vP,vF:vF,vL:vL,vBig:vBig,vLate:vLate,maxCombo:maxCombo,score:score,grade:grade,tier:tier,potential:potential,ctx:ctx,hard:!!ctx.hard,failed:failed};
+  /* 本轮是否创新高：必须在写入谱面前取历史最高，否则会被本轮覆盖、无从比较 */
+  var ckey=ctx.ckey||(ctx.type==='recall'?('recall:'+band):'');
+  var prevChart=(ckey&&state.charts&&state.charts[ckey])||null;
+  var prevBest=prevChart?Number(prevChart.bestScore||prevChart.score||0):0;
+  var newBest=!failed&&!!ckey&&score>prevBest;
+  lastRound={log:log,cards:total,vP:vP,vF:vF,vL:vL,vBig:vBig,vLate:vLate,maxCombo:maxCombo,score:score,grade:grade,tier:tier,potential:potential,ctx:ctx,hard:!!ctx.hard,failed:failed,newBest:newBest};
   /* 记录本轮成绩：list 模式写入对应谱面，回忆模式写入 recall 谱面并保留最近 10 次 */
   if(ctx.type==='list'&&ctx.ckey){
     recordChart(ctx.ckey,{key:ctx.ckey,label:ctx.catName+' List '+((ctx.idx||0)+1)+' · '+band,potential:potential,score:score,tier:tier,grade:grade,band:band,diff:diff,nodiff:!!ctx.nodiff,at:Date.now()});
@@ -1689,6 +1698,7 @@ function finish(){
    '<div class="settle-eyebrow">ROUND RESULT</div>'+
    '<div class="settle-title">'+title+hardBadge+'</div>'+
    '<div class="settle-score"><b>'+(failed?'0':score.toLocaleString())+'</b><span class="grade '+gradeClass(grade)+'">'+(failed?'—':grade)+'</span></div>'+
+   (newBest?'<div class="new-best">NEW BEST</div>':'')+
    '<div class="settle-stats"><div><b class="small cat-'+escapeHtml(band)+'">'+escapeHtml(band+' '+mark)+'</b><span>'+(where?escapeHtml(where):'评级')+'</span></div><div><b>'+total+'</b><span>单词</span></div><div><b>'+acc+'%</b><span>正确率</span></div></div>'+
    '<div class="settle-meta"><span><b>'+maxCombo+'</b>MAX COMBO</span><span><b>'+vLate+'</b>记为 Late</span><span><b>'+potential.toFixed(2)+'</b>谱面潜力</span><span><b>'+escapeHtml(modeLabelShort)+'</b>题型</span></div>'+
    bestLine+
@@ -1845,8 +1855,7 @@ function renderSettings(){
    '<div class="row"><label for="remindTime">提醒时间</label><input id="remindTime" type="time" value="'+escapeHtml(s.remindTime||'20:00')+'" aria-label="提醒时间" style="padding:8px 10px;border-radius:10px;border:1px solid #2b3340;background:#12161d;color:#eef2f7"></div>'+
    '<div class="tiny">需浏览器通知授权；无服务端推送，仅在应用打开（或后台仍存活）时触发。</div></div>'+
    '<div class="panel"><div class="panel-title">云端账号（跨设备同步）</div>'+accountPanelHtml()+'</div>'+
-   '<div class="panel"><div class="panel-title">数据管理</div><div class="actions"><button class="btn ghost" id="exportBtn" type="button">导出</button><button class="btn ghost" id="importBtn" type="button">导入</button><button class="btn danger" id="resetBtn" type="button">重置</button></div><input id="fileInput" type="file" accept="application/json,.json" class="hidden"></div>'+
-   '<div class="panel"><div class="panel-title">桌面版 · 离线安装</div><div class="actions"><button class="btn primary" id="installBtn" type="button">安装到桌面应用</button><a class="btn ghost" href="https://github.com/illudew/illuenglearn/releases" target="_blank" rel="noopener">下载桌面安装包</a></div></div>'+
+   '<div class="panel"><div class="panel-title">数据管理</div><div class="actions"><button class="btn ghost" id="exportBtn" type="button">导出</button><button class="btn danger" id="resetBtn" type="button">重置</button></div></div>'+
    '<div class="panel"><div class="panel-title">词库来源</div><div class="source-box">本地内置 <b>'+WORDS.length.toLocaleString()+'</b> 个核心词条，按 <b>小学 / 中考 / 高考 / 四级 / 六级 / 考研 / 托福 / 雅思 / GRE / 专业四级 / 专业八级 / 专有名词</b> 共 12 类整理。中文释义来自 <b>有道词典</b>；美式 / 英式音标来自 <b>open-dict-data/ipa-dict</b>；英文释义取自 <b>ECDICT / WordNet</b>；汉译英例句来自 <b>Tatoeba</b>（'+WORDS.filter(function(x){return x.sen}).length.toLocaleString()+' 词覆盖）；美 / 英音频联网时来自 dictionaryapi.dev。完全离线可用。</div></div>';
   document.querySelectorAll('#view-settings [data-level]').forEach(function(b){b.onclick=function(){
     state.settings.level=+b.dataset.level;save();renderSettings();toast('默认难度：'+lvName(state.settings.level));
@@ -1857,10 +1866,8 @@ function renderSettings(){
   var rt=$('remindToggle');if(rt)rt.onchange=function(e){state.settings.remindOn=e.target.checked;save();if(e.target.checked)requestReminder();else toast('已关闭学习提醒')};
   var rTm=$('remindTime');if(rTm)rTm.onchange=function(e){state.settings.remindTime=e.target.value||'20:00';save();toast('提醒时间：'+state.settings.remindTime)};
   $('rateRange').oninput=function(e){state.settings.speechRate=+e.target.value;$('rateVal').textContent=Number(e.target.value).toFixed(2);save()};
-  $('exportBtn').onclick=exportData;$('importBtn').onclick=function(){$('fileInput').click()};$('fileInput').onchange=importData;$('resetBtn').onclick=resetData;
-  var ib=$('installBtn');if(ib)ib.onclick=pwaInstall;
+  $('exportBtn').onclick=exportData;$('resetBtn').onclick=resetData;
   bindAccountPanel();
-  refreshInstallBtn();
   $('settingsHome').onclick=function(){showView('home')};
   renderHotkeyPanel();
 }
@@ -1918,23 +1925,6 @@ function startRecordHotkey(action,btn){
     if(_hkRecordingAction===action){_hkRecordingAction=null;document.removeEventListener('keydown',onKey,true);btn.classList.remove('on');btn.textContent=oldText}
   },8000);
 }
-/* ---------- PWA：安装到桌面 ---------- */
-var deferredPrompt=null;
-function pwaStandalone(){try{return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true}catch(e){return false}}
-function refreshInstallBtn(){
-  var b=$('installBtn');if(!b)return;
-  if(pwaStandalone()){b.textContent='已安装为桌面应用'}
-  else b.textContent=deferredPrompt?'安装到桌面应用':'如何安装到桌面';
-}
-function pwaInstall(){
-  if(deferredPrompt){
-    deferredPrompt.prompt();
-    if(deferredPrompt.userChoice)deferredPrompt.userChoice.then(function(){deferredPrompt=null;refreshInstallBtn()});
-    return;
-  }
-  if(pwaStandalone()){toast('已作为桌面应用运行');return}
-  toast('地址栏右侧「安装」；iOS 用「分享 → 添加到主屏幕」');
-}
 /* ---------- 学习提醒（PWA 通知） ----------
    说明：无服务端推送，只在应用打开（或后台仍存活）时检查；到达设定时间且当天未打卡才提醒。 */
 function notifySupported(){return typeof Notification!=='undefined'}
@@ -1960,7 +1950,6 @@ function checkReminder(){
   }catch(e){}
 }
 function exportData(){var blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='words-backup-'+today()+'.json';a.click();URL.revokeObjectURL(url);toast('备份已导出')}
-function importData(e){var f=e.target.files&&e.target.files[0];if(!f)return;var fr=new FileReader();fr.onload=function(){try{state=normalize(JSON.parse(fr.result));save();session=null;renderAll();toast('备份导入成功')}catch(err){toast('文件格式错误')}};fr.readAsText(f);e.target.value=''}
 /* 重置：清空本地学习记录，并尽力清空当前账号在云端的存档（客户端无法删除其他用户的账号，需在 Supabase 后台操作） */
 function wipeCloud(){
   if(!sbConfigured())return Promise.resolve();
@@ -2210,10 +2199,6 @@ function boot(){
     window.__reminderTimer=setInterval(checkReminder,300000); /* 每 5 分钟检查一次学习提醒 */
   }catch(e){showError(e)}
 }
-window.addEventListener('beforeinstallprompt',function(e){
-  e.preventDefault();deferredPrompt=e;refreshInstallBtn();
-});
-window.addEventListener('appinstalled',function(){deferredPrompt=null;refreshInstallBtn();toast('已安装为桌面应用')});
 function registerSW(){
   if(!('serviceWorker' in navigator))return;
   if(location.protocol!=='http:'&&location.protocol!=='https:')return;
