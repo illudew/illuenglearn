@@ -1456,16 +1456,19 @@ function submit(force,chosenW){
   var md=cardMode(item),typed=isTypedMode(md);
   var elapsed=Math.max(0,performance.now()-qStart);
   if(session)session.lastElapsed=elapsed;
+  /* 本轮「首次作答」该词才计入成绩；复现 / 回炉只影响记忆排程与即时反馈，不重复计分 */
+  var firstThisRound=!(session.uniq&&session.uniq[d.w]);
   r.seen=(r.seen||0)+1;
   var firstMeet=(r.seen===1);   /* 初识：只做认识，本轮不计入 PTT */
   if(firstMeet)r.introduced=today();
-  r.responseMs=(r.responseMs||0)+elapsed;state.totalAnswers++;state.totalSeconds+=elapsed/1000;
+  r.responseMs=(r.responseMs||0)+elapsed;
+  if(firstThisRound){state.totalAnswers++;state.totalSeconds+=elapsed/1000;}
   var ok=typed?(!force&&normWord(chosenW)===normWord(item.w)):(!force&&chosenW===item.w);
   var usedHint=hintUsed;   /* 本题是否点过提示：答对记 far、答错记 lost，且记忆率减半 */
   /* PTT：先结算惩罚的时间衰减，再按本次结果更新 */
   r.penalty=effPenalty(r);r.last=Date.now();
   if(ok){
-    if(!usedHint){state.totalCorrect++;session.correct++;}
+    if(!usedHint){if(firstThisRound){state.totalCorrect++;session.correct++;}}
     r.correct=(r.correct||0)+1;r.streak=(r.streak||0)+1;r.errStreak=0;
     if(md==='en2zh')r.meaningCorrect=(r.meaningCorrect||0)+1;else r.productionCorrect=(r.productionCorrect||0)+1;
     r.stage=Math.min(MAX_STAGE,(r.stage||0)+1);
@@ -1493,9 +1496,9 @@ function submit(force,chosenW){
     if(firstMeet){session.total++;session.queue=pushAhead(session.queue,{w:rec.w,kind:'retest'},firstGap())}
     else if(!ok){session.total++;session.queue=pushAhead(session.queue,{w:rec.w,kind:'review'},reviewGap())}
   }
-  /* 初识作答不计入「近期错误 / 忘记」窗口，避免间接影响 PTT 折扣 */
-  if(!firstMeet){state.recent.push({o:ok?1:0,f:force?1:0});if(state.recent.length>100)state.recent.shift()}
-  markDay(ok);
+  /* 初识作答与复现 / 回炉不计入「近期错误 / 忘记」窗口，避免间接影响 PTT 折扣 */
+  if(firstThisRound&&!firstMeet){state.recent.push({o:ok?1:0,f:force?1:0});if(state.recent.length>100)state.recent.shift()}
+  if(firstThisRound)markDay(ok);
   save();showFeedback(ok,d,md,r,chosenW,force);
 }
 /* 作答后弹出的即时评价：pure(蓝·答对) / lost(红·答错) / far(黄·拼写只差几个字母，或用过提示后答对) */
@@ -1528,15 +1531,21 @@ function showFeedback(ok,d,md,r,chosenW,force){
   var verdict=judgeVerdict(ok,hintUsed,typed,force,chosenW,d.w);
   /* 本轮结算统计：pure / far / lost 个数，以及本轮出现过的去重单词数 */
   if(session){
-    if(verdict==='pure')session.vPure++;else if(verdict==='far')session.vFar++;else session.vLost++;
-    if(session.uniq&&!session.uniq[d.w]){session.uniq[d.w]=1;session.uniqN++}
+    var firstThisRound=!(session.uniq&&session.uniq[d.w]);
+    /* 仅「本轮首次作答」计入 pure/far/lost、大 Pure 与本轮单词回看；
+       复现 / 回炉不重复计分，分数分母恒为去重后的单词数 */
+    if(firstThisRound){
+      session.uniq[d.w]=1;session.uniqN++;
+      if(verdict==='pure'){session.vPure++;if((session.lastElapsed||0)<=5000)session.vBig++;else session.vLate++;}
+      else if(verdict==='far')session.vFar++;
+      else session.vLost++;
+      if(session.log)session.log.push({w:d.w,verdict:verdict,big:(verdict==='pure'&&(session.lastElapsed||0)<=5000)});
+    }
+    /* 连击按每次作答计算（手感），不参与分数 */
     if(verdict==='lost')session.combo=0;else session.combo=(session.combo||0)+1;
     if(session.combo>(session.maxCombo||0))session.maxCombo=session.combo;
-    /* 大 Pure：5 秒内答对（屏幕上不显示计时），其余 pure 记为 Late */
-    if(verdict==='pure'){if((session.lastElapsed||0)<=5000)session.vBig++;else session.vLate++;}
-    if(session.log)session.log.push({w:d.w,verdict:verdict,big:(verdict==='pure'&&(session.lastElapsed||0)<=5000)});
-    /* 困难模式血条：答错 −10 且连错每次递增 −4；pure +2、far +1 */
-    if(session.ctx&&session.ctx.hard){
+    /* 困难模式血条只在首次作答结算，避免用复现反复回血 */
+    if(session.ctx&&session.ctx.hard&&firstThisRound){
       if(verdict==='lost'){
         var dmg=10+4*(session.hardErr||0);
         session.hp=Math.max(0,(session.hp==null?100:session.hp)-dmg);
