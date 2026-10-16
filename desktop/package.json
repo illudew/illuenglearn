@@ -1,7 +1,7 @@
 {
   "name": "words-desktop",
   "version": "1.0.0",
-  "description": "WORDS —— 万词记忆系统桌面版",
+  "description": "VOCABULARY —— 万词记忆系统桌面版",
   "main": "main.js",
   "author": "illudew",
   "license": "MIT",
@@ -16,7 +16,7 @@
   },
   "build": {
     "appId": "com.illudew.words",
-    "productName": "WORDS",
+    "productName": "VOCABULARY",
     "files": [
       "main.js",
       {
@@ -34,7 +34,7 @@
       "target": [
         "nsis"
       ],
-      "artifactName": "WORDS-Setup-${version}.${ext}"
+      "artifactName": "VOCABULARY-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -45,14 +45,14 @@
         "dmg"
       ],
       "category": "public.app-category.education",
-      "artifactName": "WORDS-${version}.${ext}"
+      "artifactName": "VOCABULARY-${version}.${ext}"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
       "category": "Education",
-      "artifactName": "WORDS-${version}.${ext}"
+      "artifactName": "VOCABULARY-${version}.${ext}"
     }
   }
 }

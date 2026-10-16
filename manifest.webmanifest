@@ -1,6 +1,6 @@
 {
-  "name": "WORDS · 万词记忆系统",
-  "short_name": "WORDS",
+  "name": "VOCABULARY · 万词记忆系统",
+  "short_name": "VOCABULARY",
   "description": "10,000 词主动回忆与间隔重复记忆系统，完全离线可用。",
   "lang": "zh-CN",
   "start_url": "./index.html",

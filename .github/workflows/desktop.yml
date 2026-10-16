@@ -47,7 +47,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: WORDS-${{ matrix.target }}
+          name: VOCABULARY-${{ matrix.target }}
           if-no-files-found: warn
           path: |
             desktop/release/*.exe

@@ -48,7 +48,7 @@ function createWindow() {
     minHeight: 600,
     backgroundColor: '#090a0d',
     autoHideMenuBar: true,
-    title: 'WORDS',
+    title: 'VOCABULARY',
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false
