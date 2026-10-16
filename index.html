@@ -10,8 +10,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="WORDS">
-<title>WORDS</title>
+<meta name="apple-mobile-web-app-title" content="VOCABULARY">
+<title>VOCABULARY</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;min-height:100%;background:#090a0d;color:#eef2f7}
@@ -920,7 +920,7 @@ function renderHome(){
   var learned=0;Object.keys(state.words).forEach(function(w){if(state.words[w]&&state.words[w].seen>0)learned++});
   var totalLists=0;CATS.forEach(function(c){totalLists+=c.lists.length});
   var doneCharts=Object.keys(state.charts||{}).length;
-  el.innerHTML='<div class="section-head"><div><div class="eyebrow">WORDS · '+WORDS.length.toLocaleString()+' WORDS</div><h1 class="page-title">VOCABULARY</h1></div></div>'+
+  el.innerHTML='<div class="section-head"><div><div class="eyebrow">VOCABULARY · '+WORDS.length.toLocaleString()+' WORDS</div><h1 class="page-title">VOCABULARY</h1></div></div>'+
    dueListsHtml()+
    '<div class="home-grid">'+
      '<button class="home-btn cta" id="homeStudy" type="button"><span class="hb-ico">▤</span><span class="hb-t">背单词</span><span class="hb-s">12 类考试词库 · '+totalLists+' 个 List · 已记录 '+doneCharts+' 个谱面</span></button>'+
