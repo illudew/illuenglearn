@@ -435,9 +435,15 @@ var CATS=(window.EXAM_LISTS||[]).map(function(c){
   return {k:c.k,n:c.n,band:c.band||'PST',nodiff:!!c.nodiff,count:c.lists.reduce(function(s,l){return s+(l.w||[]).length},0),lists:c.lists.slice()};
 });
 var CAT_OF={},LIST_OF={},LIST_BY_KEY={},KEYS_OF={},BAND_WORDS={PST:[],PRS:[],FTR:[],BYD:[],ALL:[]};
-// 回忆模式 band 按单词自身 baseLv 难度严格切分，确保四档难度明显区分
+/* SP 难度（专有名词、物理专业英语等）单词不进入回忆模式 */
+var SP_WORDS={};
+(window.EXAM_LISTS||[]).forEach(function(c){
+  if((c.band||'')==='SP'||c.nodiff)(c.lists||[]).forEach(function(l){(l.w||[]).forEach(function(w){SP_WORDS[w]=1})});
+});
+// 回忆模式 band 按单词自身 baseLv 难度严格切分，确保四档难度明显区分（SP 除外）
 (function(){
   WORDS.forEach(function(d){
+    if(SP_WORDS[d.w])return;
     var lv=d.baseLv||5;
     if(lv>=1&&lv<=4)BAND_WORDS.PST.push(d.w);
     if(lv>=3&&lv<=6)BAND_WORDS.PRS.push(d.w);
@@ -451,7 +457,7 @@ CATS.forEach(function(c){
     var key=c.k+':'+idx;
     LIST_BY_KEY[key]={catKey:c.k,catName:c.n,band:c.band,nodiff:!!c.nodiff,idx:idx,diff:(l.v!=null?l.v:null),words:l.w||[],key:key};
     (l.w||[]).forEach(function(w){
-      CAT_OF[w]=c.k;LIST_OF[w]=key;
+      CAT_OF[w]=CAT_OF[w]||c.k;LIST_OF[w]=key;
       var ks=KEYS_OF[w]||(KEYS_OF[w]=[]);if(ks.indexOf(key)<0)ks.push(key);
     });
   });
@@ -923,7 +929,7 @@ function renderHome(){
   el.innerHTML='<div class="section-head"><div><div class="eyebrow">VOCABULARY · '+WORDS.length.toLocaleString()+' WORDS</div><h1 class="page-title">VOCABULARY</h1></div></div>'+
    dueListsHtml()+
    '<div class="home-grid">'+
-     '<button class="home-btn cta" id="homeStudy" type="button"><span class="hb-ico">▤</span><span class="hb-t">背单词</span><span class="hb-s">12 类考试词库 · '+totalLists+' 个 List · 已记录 '+doneCharts+' 个谱面</span></button>'+
+     '<button class="home-btn cta" id="homeStudy" type="button"><span class="hb-ico">▤</span><span class="hb-t">背单词</span><span class="hb-s">'+CATS.length+' 类词库 · '+totalLists+' 个 List · 已记录 '+doneCharts+' 个谱面</span></button>'+
      '<button class="home-btn" id="homeRecall" type="button"><span class="hb-ico">◐</span><span class="hb-t">回忆模式</span><span class="hb-s">自选难度与词数</span></button>'+
      '<button class="home-btn" id="homeStats" type="button"><span class="hb-ico">◒</span><span class="hb-t">统计</span><span class="hb-s">已学 '+learned+' 词</span></button>'+
      '<button class="home-btn" id="homeSearch" type="button"><span class="hb-ico">⌕</span><span class="hb-t">单词搜索</span><span class="hb-s">查词 / 音标 / 例句</span></button>'+
@@ -1663,7 +1669,7 @@ function finish(){
   /* 记录本轮成绩：list 模式写入对应谱面，回忆模式写入 recall 谱面并保留最近 10 次 */
   if(ctx.type==='list'&&ctx.ckey){
     recordChart(ctx.ckey,{key:ctx.ckey,label:ctx.catName+' List '+((ctx.idx||0)+1)+' · '+band,potential:potential,score:score,tier:tier,grade:grade,band:band,diff:diff,nodiff:!!ctx.nodiff,at:Date.now()});
-    pushRound(potential);
+    if(!ctx.nodiff)pushRound(potential);
     state.lists=state.lists||{};
     var prevL=state.lists[ctx.ckey];
     var prevBestL=prevL?(prevL.bestScore!=null?prevL.bestScore:(prevL.score||0)):0;
