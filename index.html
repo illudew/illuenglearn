@@ -899,15 +899,14 @@ function resetList(key){
   var words=L.words||[];
   if(state.lists)delete state.lists[key];
   if(state.charts)delete state.charts[key];
-  var cleared=0,kept=0;
+  var cleared=0;
   words.forEach(function(w){
     if(!state.words[w])return;
-    if((KEYS_OF[w]||[]).length>1){kept++;return}   /* 仍被其他 List 引用，保留其记录 */
     delete state.words[w];cleared++;
   });
   save();
   if(curCatKey===L.catKey)renderLists();
-  toast('已重置 '+L.catName+' List '+(L.idx+1)+'：清除 '+cleared+' 词记录'+(kept?'（'+kept+' 词与其他 List 共用，已保留）':''));
+  toast('已重置 '+L.catName+' List '+(L.idx+1)+'：清除 '+cleared+' 词记录');
 }
 /* 结算页「再过一遍」：用本轮相同的单词与模式重新开始一轮 */
 function restartRound(){
